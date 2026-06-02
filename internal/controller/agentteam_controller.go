@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -265,13 +266,14 @@ func (r *AgentTeamReconciler) reconcileInitializing(ctx context.Context, team *c
 	// Deploy the lead pod.
 	if err := r.ensureAgentPod(ctx, team, "lead", team.Spec.Lead.Model, team.Spec.Lead.Prompt,
 		team.Spec.Lead.PermissionMode, true, team.Spec.Lead.Resources, nil,
-		team.Spec.Lead.Skills, team.Spec.Lead.MCPServers); err != nil {
+		team.Spec.Lead.Skills, team.Spec.Lead.MCPServers, nil); err != nil {
 		return ctrl.Result{}, fmt.Errorf("ensuring lead pod: %w", err)
 	}
 
 	// Deploy teammates whose dependencies are already met (or have none).
+	// Inputs[].From implicitly extends DependsOn so consumers wait for producers.
 	for _, tm := range team.Spec.Teammates {
-		if !r.dependenciesMet(ctx, team, tm.DependsOn) {
+		if !r.dependenciesMet(ctx, team, effectiveDependencies(tm)) {
 			continue
 		}
 		if !r.checkApprovalGate(ctx, team, "spawn-"+tm.Name) {
@@ -280,7 +282,7 @@ func (r *AgentTeamReconciler) reconcileInitializing(ctx context.Context, team *c
 		}
 		if err := r.ensureAgentPod(ctx, team, tm.Name, tm.Model, tm.Prompt,
 			"auto-accept", false, tm.Resources, tm.Scope,
-			tm.Skills, tm.MCPServers); err != nil {
+			tm.Skills, tm.MCPServers, tm.Inputs); err != nil {
 			return ctrl.Result{}, fmt.Errorf("ensuring teammate pod %s: %w", tm.Name, err)
 		}
 	}
@@ -356,7 +358,7 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 			return ctrl.Result{}, err
 		}
 
-		if !r.dependenciesMet(ctx, team, tm.DependsOn) {
+		if !r.dependenciesMet(ctx, team, effectiveDependencies(tm)) {
 			continue
 		}
 		if !r.checkApprovalGate(ctx, team, "spawn-"+tm.Name) {
@@ -366,7 +368,7 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 		r.clearTeammatePendingApproval(team, tm.Name)
 		if err := r.ensureAgentPod(ctx, team, tm.Name, tm.Model, tm.Prompt,
 			"auto-accept", false, tm.Resources, tm.Scope,
-			tm.Skills, tm.MCPServers); err != nil {
+			tm.Skills, tm.MCPServers, tm.Inputs); err != nil {
 			return ctrl.Result{}, fmt.Errorf("spawning teammate %s: %w", tm.Name, err)
 		}
 		log.Info("Spawned teammate", "name", tm.Name)
@@ -533,7 +535,7 @@ func (r *AgentTeamReconciler) handleTeammateFailures(ctx context.Context, team *
 
 		if err := r.ensureAgentPod(ctx, team, tm.Name, tm.Model, tm.Prompt,
 			"auto-accept", false, tm.Resources, tm.Scope,
-			tm.Skills, tm.MCPServers); err != nil {
+			tm.Skills, tm.MCPServers, tm.Inputs); err != nil {
 			return "", fmt.Errorf("re-spawning teammate %s: %w", tm.Name, err)
 		}
 	}
@@ -957,6 +959,7 @@ func (r *AgentTeamReconciler) ensureAgentPod(
 	scope *claudev1alpha1.ScopeSpec,
 	skills []claudev1alpha1.SkillSpec,
 	mcpServers []claudev1alpha1.MCPServerSpec,
+	inputs []claudev1alpha1.InputSpec,
 ) error {
 	podName := agentPodName(team, agentName)
 	pod := &corev1.Pod{}
@@ -979,7 +982,7 @@ func (r *AgentTeamReconciler) ensureAgentPod(
 		}
 	}
 
-	pod = r.buildAgentPod(team, agentName, model, prompt, permissionMode, isLead, resources, scope, skills, mcpServers)
+	pod = r.buildAgentPod(team, agentName, model, prompt, permissionMode, isLead, resources, scope, skills, mcpServers, inputs)
 	if err := ctrl.SetControllerReference(team, pod, r.Scheme); err != nil {
 		return err
 	}
@@ -1140,6 +1143,7 @@ func (r *AgentTeamReconciler) buildAgentPod(
 	scope *claudev1alpha1.ScopeSpec,
 	skills []claudev1alpha1.SkillSpec,
 	mcpServers []claudev1alpha1.MCPServerSpec,
+	inputs []claudev1alpha1.InputSpec,
 ) *corev1.Pod {
 	role := "teammate"
 	if isLead {
@@ -1304,6 +1308,53 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		})
 	}
 
+	// Output routing: stage each upstream-produced artifact at this teammate's
+	// requested mountPath via a per-input init container. The same shared
+	// workspace-output PVC that the producer wrote to is mounted into the
+	// init container at the team's standard output path; the artifact is then
+	// copied to a per-input emptyDir mounted at MountPath, which the main
+	// container also mounts so the agent sees the artifact at
+	// {MountPath}/{Artifact}.
+	//
+	// Misconfigured inputs (no matching producer / no matching artifact) are
+	// skipped silently; the teammate still launches, just without that input
+	// staged. The implicit-dependency wiring in effectiveDependencies ensures
+	// the producer has already reached Succeeded before this pod is created.
+	var initContainers []corev1.Container
+	if team.Spec.Workspace != nil && team.Spec.Workspace.Output != nil && len(inputs) > 0 {
+		outMountPath := team.Spec.Workspace.Output.MountPath
+		if outMountPath == "" {
+			outMountPath = "/workspace/output"
+		}
+		for i, in := range inputs {
+			producerPath := findProducerOutputPath(team, in.From, in.Artifact)
+			if producerPath == "" {
+				continue
+			}
+			volName := fmt.Sprintf("input-%d", i)
+			volumes = append(volumes, corev1.Volume{
+				Name:         volName,
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volName,
+				MountPath: in.MountPath,
+				ReadOnly:  true,
+			})
+			initContainers = append(initContainers, corev1.Container{
+				Name:  fmt.Sprintf("stage-input-%d", i),
+				Image: r.agentImage(),
+				Command: []string{"sh", "-c",
+					fmt.Sprintf("mkdir -p %q && cp %q %q",
+						in.MountPath, producerPath, filepath.Join(in.MountPath, in.Artifact))},
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: "workspace-output", MountPath: outMountPath, ReadOnly: true},
+					{Name: volName, MountPath: in.MountPath},
+				},
+			})
+		}
+	}
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      agentPodName(team, agentName),
@@ -1313,6 +1364,7 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		Spec: corev1.PodSpec{
 			RestartPolicy:      corev1.RestartPolicyNever,
 			ServiceAccountName: agentServiceAccountName(team, agentName),
+			InitContainers:     initContainers,
 			Containers: []corev1.Container{
 				{
 					Name:         "claude-code",
@@ -1374,6 +1426,12 @@ func (r *AgentTeamReconciler) syncPodStatuses(ctx context.Context, team *claudev
 		case err == nil:
 			st.PodName = pod.Name
 			st.Phase = podPhaseToAgentPhase(pod)
+			// Record any declared outputs as ArtifactStatus entries the first
+			// time we observe the producer pod in Succeeded. Idempotent; safe
+			// to call on every reconcile thereafter.
+			if pod.Status.Phase == corev1.PodSucceeded {
+				recordTeammateArtifacts(team, tm, time.Now())
+			}
 		case errors.IsNotFound(err):
 			st.PodName = ""
 			st.Phase = "Waiting"
@@ -1810,6 +1868,83 @@ func (r *AgentTeamReconciler) dependenciesMet(ctx context.Context, team *claudev
 		}
 	}
 	return true
+}
+
+// effectiveDependencies returns the set of teammate names this teammate must
+// wait for before spawning: the explicit DependsOn list, plus the implicit
+// set derived from each Inputs[].From. Duplicates and empty names are
+// dropped so the result is safe to pass to dependenciesMet.
+func effectiveDependencies(tm claudev1alpha1.TeammateSpec) []string {
+	seen := make(map[string]struct{}, len(tm.DependsOn)+len(tm.Inputs))
+	out := make([]string, 0, len(tm.DependsOn)+len(tm.Inputs))
+	for _, d := range tm.DependsOn {
+		if d == "" {
+			continue
+		}
+		if _, ok := seen[d]; ok {
+			continue
+		}
+		seen[d] = struct{}{}
+		out = append(out, d)
+	}
+	for _, in := range tm.Inputs {
+		if in.From == "" {
+			continue
+		}
+		if _, ok := seen[in.From]; ok {
+			continue
+		}
+		seen[in.From] = struct{}{}
+		out = append(out, in.From)
+	}
+	return out
+}
+
+// findProducerOutputPath looks up the absolute path the producer teammate
+// writes the named artifact to, by scanning the producer's Outputs for an
+// entry whose path basename matches. Returns "" if no such producer or
+// artifact is declared — call sites treat that as a misconfigured Inputs[]
+// entry and skip the input.
+func findProducerOutputPath(team *claudev1alpha1.AgentTeam, from, artifact string) string {
+	for _, tm := range team.Spec.Teammates {
+		if tm.Name != from {
+			continue
+		}
+		for _, out := range tm.Outputs {
+			if filepath.Base(out.Path) == artifact {
+				return out.Path
+			}
+		}
+	}
+	return ""
+}
+
+// recordTeammateArtifacts appends ArtifactStatus entries to team.Status.Artifacts
+// for each Outputs[] entry the named teammate declares. Idempotent: an artifact
+// already present (same Name + ProducedBy) is not re-added, so calling this
+// every reconcile after the producer reaches Succeeded is safe. Should be
+// invoked once per teammate transition to Completed.
+func recordTeammateArtifacts(team *claudev1alpha1.AgentTeam, tm claudev1alpha1.TeammateSpec, at time.Time) {
+	if len(tm.Outputs) == 0 {
+		return
+	}
+	existing := make(map[string]struct{}, len(team.Status.Artifacts))
+	for _, a := range team.Status.Artifacts {
+		existing[a.ProducedBy+"/"+a.Name] = struct{}{}
+	}
+	for _, out := range tm.Outputs {
+		name := filepath.Base(out.Path)
+		key := tm.Name + "/" + name
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		team.Status.Artifacts = append(team.Status.Artifacts, claudev1alpha1.ArtifactStatus{
+			Name:       name,
+			Path:       out.Path,
+			ProducedBy: tm.Name,
+			ProducedAt: metav1.NewTime(at),
+		})
+	}
 }
 
 // --- Timeout / Budget ---

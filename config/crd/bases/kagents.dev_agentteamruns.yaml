@@ -405,6 +405,43 @@ spec:
           status:
             description: AgentTeamStatus defines the observed state of an AgentTeam.
             properties:
+              artifacts:
+                description: |-
+                  Artifacts records the files produced by teammates that declared
+                  Outputs in their spec. Populated as each producer teammate reaches
+                  Completed; the operator does not retroactively scan teammate pods
+                  for undeclared files.
+                items:
+                  description: |-
+                    ArtifactStatus records a single artifact produced by a teammate that
+                    declared a matching OutputSpec.
+                  properties:
+                    name:
+                      description: Name is the basename of the artifact file (e.g.
+                        "findings.md").
+                      type: string
+                    path:
+                      description: |-
+                        Path is the producer pod's filesystem path where the artifact was
+                        written (mirrors OutputSpec.Path).
+                      type: string
+                    producedAt:
+                      description: |-
+                        ProducedAt is when the operator recorded the artifact — typically
+                        the first reconcile after the producer pod reached Succeeded.
+                      format: date-time
+                      type: string
+                    producedBy:
+                      description: ProducedBy is the name of the teammate that produced
+                        this artifact.
+                      type: string
+                  required:
+                  - name
+                  - path
+                  - producedAt
+                  - producedBy
+                  type: object
+                type: array
               completedAt:
                 description: CompletedAt is when the team finished execution.
                 format: date-time

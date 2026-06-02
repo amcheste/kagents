@@ -144,6 +144,7 @@ _Appears in:_
 | `tasks` _[TaskSummary](#tasksummary)_ | Tasks reports aggregate task progress. |  | Optional: \{\} <br /> |
 | `pullRequest` _[PullRequestStatus](#pullrequeststatus)_ | PullRequest reports PR creation status. |  | Optional: \{\} <br /> |
 | `consolidatedBranch` _string_ | ConsolidatedBranch is the branch name pushed by OnComplete=push-branch.<br />Populated once the push-branch Job succeeds; OnComplete=create-pr reads<br />this as the PR head branch when set, in place of Spec.Repository.Branch. |  | Optional: \{\} <br /> |
+| `artifacts` _[ArtifactStatus](#artifactstatus) array_ | Artifacts records the files produced by teammates that declared<br />Outputs in their spec. Populated as each producer teammate reaches<br />Completed; the operator does not retroactively scan teammate pods<br />for undeclared files. |  | Optional: \{\} <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations. |  | Optional: \{\} <br /> |
 
 
@@ -225,6 +226,26 @@ _Appears in:_
 | `webhookUrl` _string_ | WebhookURL to POST when this gate is triggered (used when channel is "webhook"). |  | Optional: \{\} <br /> |
 
 
+#### ArtifactStatus
+
+
+
+ArtifactStatus records a single artifact produced by a teammate that
+declared a matching OutputSpec.
+
+
+
+_Appears in:_
+- [AgentTeamStatus](#agentteamstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the basename of the artifact file (e.g. "findings.md"). |  |  |
+| `path` _string_ | Path is the producer pod's filesystem path where the artifact was<br />written (mirrors OutputSpec.Path). |  |  |
+| `producedBy` _string_ | ProducedBy is the name of the teammate that produced this artifact. |  |  |
+| `producedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | ProducedAt is when the operator recorded the artifact — typically<br />the first reconcile after the producer pod reached Succeeded. |  |  |
+
+
 #### AuthSpec
 
 
@@ -278,6 +299,29 @@ _Appears in:_
 | `mailboxBackend` _string_ | MailboxBackend determines how mailbox messages are transported. | shared-volume | Enum: [shared-volume redis nats] <br /> |
 | `taskBackend` _string_ | TaskBackend determines how the shared task list is stored. | shared-volume | Enum: [shared-volume beads] <br /> |
 | `beads` _[BeadsSpec](#beadsspec)_ | Beads configures optional Beads integration for persistent tracking. |  | Optional: \{\} <br /> |
+
+
+#### InputSpec
+
+
+
+InputSpec declares an artifact this teammate consumes from an upstream
+teammate's outputs. The operator (a) treats From as an implicit
+dependency — this teammate is not spawned until the producer reaches
+Completed — and (b) wires an init container that copies the named
+artifact onto MountPath on this teammate's pod before the main
+container starts. The final on-pod path is {MountPath}/{Artifact}.
+
+
+
+_Appears in:_
+- [TeammateSpec](#teammatespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `from` _string_ | From names the upstream teammate that produces the artifact. |  |  |
+| `artifact` _string_ | Artifact is the basename of the producer's output file<br />(e.g. "findings.md" for an output path of /workspace/output/findings.md).<br />The operator resolves the full source path by scanning the named<br />producer's Outputs[] for an entry whose Path basename matches. |  |  |
+| `mountPath` _string_ | MountPath is the absolute directory path on this teammate's pod<br />where the artifact will be made available. The operator creates<br />an emptyDir at MountPath and stages the artifact there via an<br />init container; the main container sees \{MountPath\}/\{Artifact\}. |  |  |
 
 
 #### LeadSpec
@@ -381,6 +425,25 @@ _Appears in:_
 | `metrics` _[MetricsSpec](#metricsspec)_ | Metrics configures Prometheus metrics exposition. |  | Optional: \{\} <br /> |
 | `logLevel` _string_ | LogLevel controls operator log verbosity for this team. | info | Enum: [debug info warn error] <br /> |
 | `webhook` _[WebhookSpec](#webhookspec)_ | Webhook configures event notifications. |  | Optional: \{\} <br /> |
+
+
+#### OutputSpec
+
+
+
+OutputSpec declares a file an agent produces. Downstream teammates
+consume it by declaring a matching InputSpec; the operator also
+records each output in AgentTeam.Status.Artifacts on completion.
+
+
+
+_Appears in:_
+- [TeammateSpec](#teammatespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `path` _string_ | Path is the absolute filesystem path on the producer pod where the<br />teammate writes the artifact. For Cowork teams this is typically a<br />path under the team's output mount (e.g. /workspace/output/findings.md). |  |  |
+| `description` _string_ | Description is an optional human-readable summary of the artifact. |  | Optional: \{\} <br /> |
 
 
 #### PullRequestSpec
@@ -548,6 +611,8 @@ _Appears in:_
 | `prompt` _string_ | Prompt is the spawn instruction for this teammate. |  |  |
 | `scope` _[ScopeSpec](#scopespec)_ | Scope restricts which files this teammate can access. |  | Optional: \{\} <br /> |
 | `dependsOn` _string array_ | DependsOn lists teammate names that must complete before this one starts. |  | Optional: \{\} <br /> |
+| `outputs` _[OutputSpec](#outputspec) array_ | Outputs declares the artifacts this teammate produces. Each entry<br />records a file path the teammate's prompt is expected to write.<br />On completion the operator records every declared output in<br />AgentTeam.Status.Artifacts and makes them available to any<br />downstream teammate that consumes them via Inputs. |  | Optional: \{\} <br /> |
+| `inputs` _[InputSpec](#inputspec) array_ | Inputs declares the upstream-produced artifacts this teammate<br />consumes. Each entry names a producer teammate (From) and an<br />artifact basename (Artifact); the operator (a) treats From as<br />an implicit dependency — this teammate is not spawned until the<br />producer reaches Completed — and (b) wires an init container that<br />stages the artifact at MountPath on this teammate's pod before<br />the main container starts. |  | Optional: \{\} <br /> |
 | `skills` _[SkillSpec](#skillspec) array_ | Skills to mount into .claude/skills/ for this teammate. |  | Optional: \{\} <br /> |
 | `mcpServers` _[MCPServerSpec](#mcpserverspec) array_ | MCPServers configures Model Context Protocol connections for this teammate. |  | Optional: \{\} <br /> |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | Resources defines compute resources for this teammate's pod. |  | Optional: \{\} <br /> |

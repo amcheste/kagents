@@ -1,0 +1,67 @@
+# Output routing sample — a Cowork team where the writer consumes the
+# researcher's artifact via declarative inputs/outputs.
+#
+# Behavior:
+#   - researcher writes /workspace/output/findings.md (declared in Outputs).
+#   - writer declares Inputs[0] = {from: researcher, artifact: findings.md,
+#     mountPath: /workspace/stage/research}.
+#   - The operator (a) treats `from: researcher` as an implicit dependency so
+#     the writer's pod is not spawned until researcher reaches Completed, and
+#     (b) wires an init container on the writer's pod that copies
+#     /workspace/output/findings.md into /workspace/stage/research/findings.md
+#     via a per-input emptyDir.
+#   - On researcher completion, the operator records an ArtifactStatus entry
+#     in status.artifacts.
+#
+# Apply with:
+#   kubectl apply -n cowork-agents -f config/samples/output-routing-team.yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeam
+metadata:
+  name: market-brief
+  namespace: cowork-agents
+spec:
+  workspace:
+    inputs:
+      - configMap: "market-data"
+        mountPath: "/workspace/data"
+    output:
+      mountPath: "/workspace/output"
+      size: "1Gi"
+
+  auth:
+    apiKeySecret: "anthropic-api-key"
+
+  lead:
+    model: "opus"
+    prompt: |
+      Coordinate a market brief: research first, then a 1-page executive
+      summary based on the researcher's findings.
+
+  teammates:
+    - name: "researcher"
+      model: "sonnet"
+      prompt: |
+        Analyze the data in /workspace/data and write your findings as
+        Markdown to /workspace/output/findings.md.
+      outputs:
+        - path: "/workspace/output/findings.md"
+          description: "Research findings — input for the writer."
+
+    - name: "writer"
+      model: "sonnet"
+      prompt: |
+        Read the researcher's findings at /workspace/stage/research/findings.md
+        and produce a one-page executive summary at
+        /workspace/output/summary.md.
+      inputs:
+        - from: "researcher"
+          artifact: "findings.md"
+          mountPath: "/workspace/stage/research"
+      outputs:
+        - path: "/workspace/output/summary.md"
+          description: "Executive summary — final deliverable."
+
+  lifecycle:
+    timeout: "1h"
+    budgetLimit: "5.00"
