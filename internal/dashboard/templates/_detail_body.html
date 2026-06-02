@@ -37,6 +37,54 @@
     </div>
   </div>
 
+  {{if .Status.Pipeline}}
+  <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
+    <h2 class="px-4 py-3 text-sm font-semibold border-b border-slate-200 flex items-center justify-between">
+      <span>Pipeline</span>
+      <span class="text-xs font-normal text-slate-500">{{.Status.Pipeline.StagesCompleted}} of {{.Status.Pipeline.StagesTotal}} stages complete</span>
+    </h2>
+    <div class="px-4 py-3">
+      {{$pct := pipelinePercent .Status.Pipeline}}
+      <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden mb-3">
+        <div class="h-2 bg-blue-500" style="width: {{$pct}}%;"></div>
+      </div>
+      <ol class="space-y-2">
+        {{range .Status.Pipeline.Stages}}
+        <li class="flex items-center gap-3 text-sm">
+          <span class="phase-{{.Phase}} px-2 py-0.5 rounded text-xs font-medium min-w-[5.5rem] text-center">{{or .Phase "Waiting"}}</span>
+          <span class="font-mono text-xs text-slate-700">{{.Name}}</span>
+          <span class="text-xs text-slate-500">{{.TeammatesReady}}</span>
+        </li>
+        {{end}}
+      </ol>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Status.Artifacts}}
+  <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
+    <h2 class="px-4 py-3 text-sm font-semibold border-b border-slate-200">Artifacts</h2>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-left text-xs uppercase text-slate-600">
+        <tr>
+          <th class="px-4 py-2">Name</th>
+          <th class="px-4 py-2">Produced by</th>
+          <th class="px-4 py-2">Path</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Status.Artifacts}}
+        <tr class="border-t border-slate-100">
+          <td class="px-4 py-2 font-mono text-xs">{{.Name}}</td>
+          <td class="px-4 py-2 text-slate-600">{{.ProducedBy}}</td>
+          <td class="px-4 py-2 font-mono text-xs text-slate-500">{{.Path}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+
   <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
     <h2 class="px-4 py-3 text-sm font-semibold border-b border-slate-200">Teammates</h2>
     <table class="w-full text-sm">

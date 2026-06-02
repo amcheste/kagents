@@ -848,6 +848,7 @@ type PullRequestStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.ready`
+// +kubebuilder:printcolumn:name="Stage",type=string,JSONPath=`.status.pipeline.currentStage`,priority=1
 // +kubebuilder:printcolumn:name="Tasks Done",type=integer,JSONPath=`.status.tasks.completed`
 // +kubebuilder:printcolumn:name="Cost",type=string,JSONPath=`.status.estimatedCost`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

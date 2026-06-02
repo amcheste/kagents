@@ -88,7 +88,12 @@ The operator exposes Prometheus metrics, ships a Grafana dashboard, and fires we
 
 ### Prometheus metrics
 
-The operator binary exposes `/metrics` on port 8080 by default. Eight series, all labeled by team name and (where applicable) teammate name + model:
+The operator binary exposes `/metrics` on port 8080 by default. Two
+prefix families are emitted in parallel: the original `claude_*` series
+that have been there since v0.3.0 (kept stable to avoid breaking
+existing dashboards), and a `kagents_*` family added in v0.8.0 that
+covers knowledge-work observability (pipeline stages, artifacts,
+delivery). Both stream from the same `/metrics` endpoint.
 
 | Metric | Type | Description |
 |--------|------|-------------|
@@ -100,6 +105,11 @@ The operator binary exposes `/metrics` on port 8080 by default. Eight series, al
 | `claude_teammate_restarts_total` | counter | Pod restarts per teammate |
 | `claude_team_budget_remaining_usd` | gauge | `budgetLimit - estimatedCostUsd` |
 | `claude_teammate_idle_seconds` | histogram | Time between task completions per teammate |
+| `kagents_team_pipeline_stage_active` | gauge | 1 while a pipeline stage is in `Running`, 0 otherwise. Labels: `team`, `namespace`, `stage` |
+| `kagents_team_stage_duration_seconds` | histogram | Stage wall-clock duration observed once at the `Running → Completed` transition |
+| `kagents_team_artifacts_produced_total` | counter | Artifacts appended to `status.artifacts` per teammate |
+| `kagents_team_delivery_success_total` | counter | Successful `onComplete: deliver` dispatches, by target type |
+| `kagents_team_delivery_failure_total` | counter | Failed deliveries by target type |
 
 Wire them to Prometheus by enabling the chart's ServiceMonitor:
 

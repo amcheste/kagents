@@ -1739,9 +1739,11 @@ func (r *AgentTeamReconciler) executeDelivery(ctx context.Context, team *claudev
 		if err := dispatcher.Send(ctx, r.Client, target, team); err != nil {
 			status.Success = false
 			status.Error = err.Error()
+			metrics.RecordDeliveryFailure(team.Name, team.Namespace, target.Type)
 			r.recordEvent(team, corev1.EventTypeWarning, "DeliveryFailed",
 				"Delivery %s to %s failed: %v", target.Type, status.Target, err)
 		} else {
+			metrics.RecordDeliverySuccess(team.Name, team.Namespace, target.Type)
 			r.recordEvent(team, corev1.EventTypeNormal, "DeliveryComplete",
 				"Delivery %s to %s succeeded", target.Type, status.Target)
 		}
@@ -2190,6 +2192,7 @@ func (r *AgentTeamReconciler) updatePipelineStatus(team *claudev1alpha1.AgentTea
 			}
 		}
 
+		prevPhase := ss.Phase
 		switch {
 		case anyFailed:
 			ss.Phase = "Failed"
@@ -2212,6 +2215,22 @@ func (r *AgentTeamReconciler) updatePipelineStatus(team *claudev1alpha1.AgentTea
 			}
 		default:
 			ss.Phase = "Waiting"
+		}
+
+		// Emit observability signals on phase transitions. Running and
+		// Completed are the two interesting edges:
+		//
+		//   * Running:   flip the stage_active gauge to 1 so dashboards
+		//                show where each team currently is.
+		//   * Completed: flip the gauge back to 0 and observe the stage's
+		//                wall-clock duration (StartedAt → now). The
+		//                histogram observation is gated on a fresh
+		//                CompletedAt (== now) so re-reconciles of an
+		//                already-completed stage don't double-count.
+		metrics.SetPipelineStageActive(team.Name, team.Namespace, ss.Name, ss.Phase == "Running")
+		if prevPhase != "Completed" && ss.Phase == "Completed" && ss.StartedAt != nil && ss.CompletedAt != nil {
+			metrics.ObservePipelineStageDuration(team.Name, team.Namespace, ss.Name,
+				ss.CompletedAt.Sub(ss.StartedAt.Time).Seconds())
 		}
 
 		if ss.Phase == "Completed" {
@@ -2254,6 +2273,10 @@ func findProducerOutputPath(team *claudev1alpha1.AgentTeam, from, artifact strin
 // already present (same Name + ProducedBy) is not re-added, so calling this
 // every reconcile after the producer reaches Succeeded is safe. Should be
 // invoked once per teammate transition to Completed.
+//
+// Each newly-appended artifact also bumps the
+// kagents_team_artifacts_produced_total counter — the existence check
+// above is what makes the metric idempotent across reconciles.
 func recordTeammateArtifacts(team *claudev1alpha1.AgentTeam, tm claudev1alpha1.TeammateSpec, at time.Time) {
 	if len(tm.Outputs) == 0 {
 		return
@@ -2274,6 +2297,7 @@ func recordTeammateArtifacts(team *claudev1alpha1.AgentTeam, tm claudev1alpha1.T
 			ProducedBy: tm.Name,
 			ProducedAt: metav1.NewTime(at),
 		})
+		metrics.RecordArtifactProduced(team.Name, team.Namespace, tm.Name)
 	}
 }
 
