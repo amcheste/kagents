@@ -108,6 +108,8 @@ nav:
           - Expose the dashboard: how-to/operate/expose-dashboard.md
           - Configure shared storage: how-to/operate/shared-storage.md
           - Set budget alerts: how-to/operate/budget-alerts.md
+      - Author skills:
+          - Package and publish skills: how-to/skill-authoring.md
   - Reference:
       - reference/index.md
       - API reference: reference/api/index.md

@@ -119,6 +119,32 @@ spec:
                 enum:
                 - claude-code
                 type: string
+              imagePullSecrets:
+                description: |-
+                  ImagePullSecrets are credentials for pulling private container
+                  images, including OCI-distributed skills. The same secrets are
+                  applied to agent pods (for the runner image) and to skill-puller
+                  init containers (for pulling skill artifacts via ORAS). Use
+                  kubernetes.io/dockerconfigjson Secrets — the operator mounts them
+                  into the init container so ORAS can resolve registry credentials
+                  from $DOCKER_CONFIG.
+                items:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      default: ""
+                      description: |-
+                        Name of the referent.
+                        This field is effectively required, but due to backwards compatibility is
+                        allowed to be empty. Instances of this type with an empty value here are
+                        almost certainly wrong.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
               lead:
                 description: Lead configures the team lead agent.
                 properties:
@@ -244,14 +270,30 @@ spec:
                                 Each key in the ConfigMap becomes a file in the skill directory.
                               type: string
                             oci:
-                              description: OCI is an OCI artifact reference containing
-                                the skill files (e.g. "ghcr.io/org/skills/web-research:v1").
+                              description: |-
+                                OCI is an OCI artifact reference containing the skill files
+                                (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+                                an `oras pull` init container at pod startup to materialize the
+                                skill onto an emptyDir; the main container then sees the files
+                                under ~/.claude/skills/{name}/. Private registries are supported
+                                via spec.imagePullSecrets.
+
+                                Re-pull semantics: the init container runs once per pod start,
+                                so the artifact is re-pulled on every pod create. There is no
+                                shared cache between pods — operators who want one should pin
+                                to immutable digests so the registry can short-circuit identical
+                                pulls cheaply.
                               type: string
                           type: object
                       required:
                       - name
                       - source
                       type: object
+                      x-kubernetes-validations:
+                      - message: skill source must set exactly one of configMap or
+                          oci
+                        rule: '(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci)
+                          ? 1 : 0) == 1'
                     type: array
                 required:
                 - prompt
@@ -825,14 +867,30 @@ spec:
                                   Each key in the ConfigMap becomes a file in the skill directory.
                                 type: string
                               oci:
-                                description: OCI is an OCI artifact reference containing
-                                  the skill files (e.g. "ghcr.io/org/skills/web-research:v1").
+                                description: |-
+                                  OCI is an OCI artifact reference containing the skill files
+                                  (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+                                  an `oras pull` init container at pod startup to materialize the
+                                  skill onto an emptyDir; the main container then sees the files
+                                  under ~/.claude/skills/{name}/. Private registries are supported
+                                  via spec.imagePullSecrets.
+
+                                  Re-pull semantics: the init container runs once per pod start,
+                                  so the artifact is re-pulled on every pod create. There is no
+                                  shared cache between pods — operators who want one should pin
+                                  to immutable digests so the registry can short-circuit identical
+                                  pulls cheaply.
                                 type: string
                             type: object
                         required:
                         - name
                         - source
                         type: object
+                        x-kubernetes-validations:
+                        - message: skill source must set exactly one of configMap
+                            or oci
+                          rule: '(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci)
+                            ? 1 : 0) == 1'
                       type: array
                   required:
                   - name

@@ -66,6 +66,16 @@ type AgentTeamSpec struct {
 	// +kubebuilder:default="claude-code"
 	// +optional
 	Harness string `json:"harness,omitempty"`
+
+	// ImagePullSecrets are credentials for pulling private container
+	// images, including OCI-distributed skills. The same secrets are
+	// applied to agent pods (for the runner image) and to skill-puller
+	// init containers (for pulling skill artifacts via ORAS). Use
+	// kubernetes.io/dockerconfigjson Secrets — the operator mounts them
+	// into the init container so ORAS can resolve registry credentials
+	// from $DOCKER_CONFIG.
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 }
 
 // RepositorySpec defines the git repository configuration.
@@ -127,20 +137,37 @@ type LeadSpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-// SkillSource identifies where to load a skill from. Exactly one field should be set.
+// SkillSource identifies where to load a skill from. Exactly one of
+// ConfigMap or OCI must be set (enforced by CEL on SkillSpec).
+//
+// ConfigMap is simplest and lives entirely within the cluster — good
+// for skills authored alongside the team CRs. OCI distributes skills
+// as registry artifacts so they can be versioned, signed, shared
+// across clusters, and pulled from public or private registries.
 type SkillSource struct {
 	// ConfigMap references a ConfigMap in the same namespace.
 	// Each key in the ConfigMap becomes a file in the skill directory.
 	// +optional
 	ConfigMap string `json:"configMap,omitempty"`
 
-	// OCI is an OCI artifact reference containing the skill files (e.g. "ghcr.io/org/skills/web-research:v1").
-	// TODO: OCI skill pulling is not yet implemented; use ConfigMap instead.
+	// OCI is an OCI artifact reference containing the skill files
+	// (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+	// an `oras pull` init container at pod startup to materialize the
+	// skill onto an emptyDir; the main container then sees the files
+	// under ~/.claude/skills/{name}/. Private registries are supported
+	// via spec.imagePullSecrets.
+	//
+	// Re-pull semantics: the init container runs once per pod start,
+	// so the artifact is re-pulled on every pod create. There is no
+	// shared cache between pods — operators who want one should pin
+	// to immutable digests so the registry can short-circuit identical
+	// pulls cheaply.
 	// +optional
 	OCI string `json:"oci,omitempty"`
 }
 
 // SkillSpec defines a Claude Code skill to mount into an agent pod.
+// +kubebuilder:validation:XValidation:rule="(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci) ? 1 : 0) == 1",message="skill source must set exactly one of configMap or oci"
 type SkillSpec struct {
 	// Name is the skill directory name under .claude/skills/.
 	Name string `json:"name"`

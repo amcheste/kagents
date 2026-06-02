@@ -35,6 +35,12 @@ import (
 
 const (
 	defaultInitImage = "alpine/git:latest"
+
+	// defaultSkillPullerImage is the OCI artifact puller used to
+	// materialize skills declared with SkillSource.OCI. ORAS speaks
+	// the OCI distribution spec directly and supports artifacts that
+	// aren't container images, which is what skills are.
+	defaultSkillPullerImage = "ghcr.io/oras-project/oras:v1.2.0"
 )
 
 // AgentTeamReconciler reconciles an AgentTeam object.
@@ -48,6 +54,12 @@ type AgentTeamReconciler struct {
 
 	// InitImage overrides the default alpine/git image used for the repo init Job.
 	InitImage string
+
+	// SkillPullerImage overrides the default ORAS image used to pull
+	// OCI-distributed skills into agent pods. Tests can swap in a
+	// no-op image; air-gapped clusters can pin to an internally
+	// mirrored ORAS build.
+	SkillPullerImage string
 
 	// SkipInitScript replaces the init Job's git-clone script with a no-op (exit 0).
 	// Used in acceptance tests where no real git repository is available.
@@ -151,6 +163,13 @@ func (r *AgentTeamReconciler) initImage() string {
 		return r.InitImage
 	}
 	return defaultInitImage
+}
+
+func (r *AgentTeamReconciler) skillPullerImage() string {
+	if r.SkillPullerImage != "" {
+		return r.SkillPullerImage
+	}
+	return defaultSkillPullerImage
 }
 
 // +kubebuilder:rbac:groups=kagents.dev,resources=agentteams,verbs=get;list;watch;create;update;patch;delete
@@ -1297,25 +1316,83 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		}
 	}
 
-	// Skills: each ConfigMap-backed skill gets mounted at /var/claude-skills/{name}/.
-	// The entrypoint copies them into ~/.claude/skills/{name}/.
+	// Skills: each skill is materialized at /var/claude-skills/{name}/;
+	// the runner entrypoint copies that directory into ~/.claude/skills/{name}/
+	// before launching Claude Code.
+	//
+	// ConfigMap source: mount directly. Cheapest path — no network, no
+	// extra container, just a projected ConfigMap volume.
+	//
+	// OCI source: an init container pulls the artifact via `oras` into
+	// a per-skill emptyDir that the main container also mounts. Pull
+	// credentials come from spec.imagePullSecrets — the first listed
+	// kubernetes.io/dockerconfigjson Secret is projected at
+	// /auth/.docker/config.json and DOCKER_CONFIG points at it, which
+	// ORAS picks up natively. Multi-registry deployments combine creds
+	// into a single dockerconfigjson; this keeps the init container's
+	// auth surface to one mount.
+	var skillInitContainers []corev1.Container
+	needSkillAuth := false
 	for _, skill := range skills {
-		if skill.Source.ConfigMap == "" {
-			continue // OCI not yet implemented.
-		}
 		volName := "skill-" + skill.Name
+		switch {
+		case skill.Source.ConfigMap != "":
+			volumes = append(volumes, corev1.Volume{
+				Name: volName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: skill.Source.ConfigMap},
+					},
+				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volName,
+				MountPath: fmt.Sprintf("/var/claude-skills/%s", skill.Name),
+				ReadOnly:  true,
+			})
+		case skill.Source.OCI != "":
+			volumes = append(volumes, corev1.Volume{
+				Name:         volName,
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volName,
+				MountPath: fmt.Sprintf("/var/claude-skills/%s", skill.Name),
+				ReadOnly:  true,
+			})
+			initMounts := []corev1.VolumeMount{
+				{Name: volName, MountPath: "/skill-out"},
+			}
+			var initEnv []corev1.EnvVar
+			if len(team.Spec.ImagePullSecrets) > 0 {
+				needSkillAuth = true
+				initMounts = append(initMounts, corev1.VolumeMount{
+					Name: "skill-auth", MountPath: "/auth/.docker", ReadOnly: true,
+				})
+				initEnv = append(initEnv, corev1.EnvVar{Name: "DOCKER_CONFIG", Value: "/auth/.docker"})
+			}
+			skillInitContainers = append(skillInitContainers, corev1.Container{
+				Name:         "pull-skill-" + skill.Name,
+				Image:        r.skillPullerImage(),
+				Command:      []string{"oras", "pull", "--output", "/skill-out", skill.Source.OCI},
+				Env:          initEnv,
+				VolumeMounts: initMounts,
+			})
+		}
+	}
+	if needSkillAuth {
+		// Project the first imagePullSecret's .dockerconfigjson into a
+		// fixed path the init containers read. Items[] is explicit so
+		// the mounted filename is always "config.json", regardless of
+		// the Secret's key name preference.
 		volumes = append(volumes, corev1.Volume{
-			Name: volName,
+			Name: "skill-auth",
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: skill.Source.ConfigMap},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: team.Spec.ImagePullSecrets[0].Name,
+					Items:      []corev1.KeyToPath{{Key: ".dockerconfigjson", Path: "config.json"}},
 				},
 			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      volName,
-			MountPath: fmt.Sprintf("/var/claude-skills/%s", skill.Name),
-			ReadOnly:  true,
 		})
 	}
 
@@ -1351,6 +1428,9 @@ func (r *AgentTeamReconciler) buildAgentPod(
 	// staged. The implicit-dependency wiring in effectiveDependencies ensures
 	// the producer has already reached Succeeded before this pod is created.
 	var initContainers []corev1.Container
+	// Skill pulls run first so they're available before any input
+	// staging that might reference skill-produced configs.
+	initContainers = append(initContainers, skillInitContainers...)
 	if team.Spec.Workspace != nil && team.Spec.Workspace.Output != nil && len(inputs) > 0 {
 		outMountPath := team.Spec.Workspace.Output.MountPath
 		if outMountPath == "" {
@@ -1394,6 +1474,7 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		Spec: corev1.PodSpec{
 			RestartPolicy:      corev1.RestartPolicyNever,
 			ServiceAccountName: agentServiceAccountName(team, agentName),
+			ImagePullSecrets:   team.Spec.ImagePullSecrets,
 			InitContainers:     initContainers,
 			Containers: []corev1.Container{
 				{

@@ -37,6 +37,7 @@ func main() {
 	var enableLeaderElection bool
 	var agentImage string
 	var initImage string
+	var skillPullerImage string
 	var skipInitScript bool
 	var pvcAccessMode string
 	var agentCommand string
@@ -46,6 +47,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager.")
 	flag.StringVar(&agentImage, "agent-image", "", "Override the container image used for agent pods (default: ghcr.io/amcheste/claude-code-runner:latest).")
 	flag.StringVar(&initImage, "init-image", "", "Override the container image used for the repo init Job (default: alpine/git:latest).")
+	flag.StringVar(&skillPullerImage, "skill-puller-image", "", "Override the container image used to pull OCI-distributed skills (default: ghcr.io/oras-project/oras:v1.2.0). Air-gapped clusters can pin to an internal mirror.")
 	flag.BoolVar(&skipInitScript, "skip-init-script", false, "Replace the init Job git-clone script with a no-op exit 0. Use in acceptance tests where no real repo is available.")
 	flag.StringVar(&pvcAccessMode, "pvc-access-mode", "", "Override PVC access mode for all operator-managed PVCs (ReadWriteMany|ReadWriteOnce). Defaults to ReadWriteMany. Set to ReadWriteOnce for single-node clusters like Kind.")
 	flag.StringVar(&agentCommand, "agent-command", "", "Override the agent container command as a comma-separated list (e.g. sh,-c,sleep 30 && exit 0). Used in acceptance tests to keep pods alive long enough to observe.")
@@ -71,13 +73,14 @@ func main() {
 	}
 
 	reconciler := &controller.AgentTeamReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		AgentImage:     agentImage,
-		InitImage:      initImage,
-		SkipInitScript: skipInitScript,
-		Harnesses:      harness.DefaultRegistry(),
-		Delivery:       delivery.NewDispatcher(),
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		AgentImage:       agentImage,
+		InitImage:        initImage,
+		SkillPullerImage: skillPullerImage,
+		SkipInitScript:   skipInitScript,
+		Harnesses:        harness.DefaultRegistry(),
+		Delivery:         delivery.NewDispatcher(),
 	}
 	if agentCommand != "" {
 		reconciler.AgentCommand = strings.Split(agentCommand, ",")
