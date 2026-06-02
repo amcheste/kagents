@@ -187,6 +187,7 @@ _Appears in:_
 | `observability` _[ObservabilitySpec](#observabilityspec)_ | Observability configures metrics and notifications. |  | Optional: \{\} <br /> |
 | `pipeline` _[PipelineSpec](#pipelinespec)_ | Pipeline declares an ordered set of stages with explicit fan-out/merge<br />semantics. When set, the operator derives each teammate's effective<br />dependencies from the stage graph instead of the per-teammate DependsOn<br />field, which becomes mutually exclusive (enforced by CEL validation<br />on this spec). Inputs[].From still contributes regardless. |  | Optional: \{\} <br /> |
 | `harness` _string_ | Harness selects the agent runtime that powers this team's pods.<br />Today the only supported value is "claude-code" (Anthropic's native<br />Claude Code Agent Teams protocol), which is also the default when<br />omitted. The field exists so the operator's API stays neutral to a<br />single agent runtime; future harnesses for other team-based agent<br />systems can plug in behind the same CRD without an API break. | claude-code | Enum: [claude-code] <br />Optional: \{\} <br /> |
+| `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | ImagePullSecrets are credentials for pulling private container<br />images, including OCI-distributed skills. The same secrets are<br />applied to agent pods (for the runner image) and to skill-puller<br />init containers (for pulling skill artifacts via ORAS). Use<br />kubernetes.io/dockerconfigjson Secrets — the operator mounts them<br />into the init container so ORAS can resolve registry credentials<br />from $DOCKER_CONFIG. |  | Optional: \{\} <br /> |
 
 
 #### AgentTeamStatus
@@ -821,7 +822,13 @@ _Appears in:_
 
 
 
-SkillSource identifies where to load a skill from. Exactly one field should be set.
+SkillSource identifies where to load a skill from. Exactly one of
+ConfigMap or OCI must be set (enforced by CEL on SkillSpec).
+
+ConfigMap is simplest and lives entirely within the cluster — good
+for skills authored alongside the team CRs. OCI distributes skills
+as registry artifacts so they can be versioned, signed, shared
+across clusters, and pulled from public or private registries.
 
 
 
@@ -831,7 +838,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `configMap` _string_ | ConfigMap references a ConfigMap in the same namespace.<br />Each key in the ConfigMap becomes a file in the skill directory. |  | Optional: \{\} <br /> |
-| `oci` _string_ | OCI is an OCI artifact reference containing the skill files (e.g. "ghcr.io/org/skills/web-research:v1"). |  | Optional: \{\} <br /> |
+| `oci` _string_ | OCI is an OCI artifact reference containing the skill files<br />(e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs<br />an `oras pull` init container at pod startup to materialize the<br />skill onto an emptyDir; the main container then sees the files<br />under ~/.claude/skills/\{name\}/. Private registries are supported<br />via spec.imagePullSecrets.<br />Re-pull semantics: the init container runs once per pod start,<br />so the artifact is re-pulled on every pod create. There is no<br />shared cache between pods — operators who want one should pin<br />to immutable digests so the registry can short-circuit identical<br />pulls cheaply. |  | Optional: \{\} <br /> |
 
 
 #### SkillSpec

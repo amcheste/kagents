@@ -217,14 +217,30 @@ spec:
                                 Each key in the ConfigMap becomes a file in the skill directory.
                               type: string
                             oci:
-                              description: OCI is an OCI artifact reference containing
-                                the skill files (e.g. "ghcr.io/org/skills/web-research:v1").
+                              description: |-
+                                OCI is an OCI artifact reference containing the skill files
+                                (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+                                an `oras pull` init container at pod startup to materialize the
+                                skill onto an emptyDir; the main container then sees the files
+                                under ~/.claude/skills/{name}/. Private registries are supported
+                                via spec.imagePullSecrets.
+
+                                Re-pull semantics: the init container runs once per pod start,
+                                so the artifact is re-pulled on every pod create. There is no
+                                shared cache between pods — operators who want one should pin
+                                to immutable digests so the registry can short-circuit identical
+                                pulls cheaply.
                               type: string
                           type: object
                       required:
                       - name
                       - source
                       type: object
+                      x-kubernetes-validations:
+                      - message: skill source must set exactly one of configMap or
+                          oci
+                        rule: '(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci)
+                          ? 1 : 0) == 1'
                     type: array
                 required:
                 - prompt
