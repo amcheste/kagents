@@ -1,0 +1,47 @@
+{{- if .Values.trigger.enabled }}
+# Cluster-scoped read on AgentTeamTrigger because webhook paths are
+# matched cluster-wide (the listener is a single deployment serving
+# triggers from every namespace).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-trigger
+  labels:
+    app.kubernetes.io/name: kagents
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: trigger
+rules:
+  # Read all triggers across the cluster to match incoming webhook paths.
+  - apiGroups: ["kagents.dev"]
+    resources: ["agentteamtriggers"]
+    verbs: ["get", "list", "watch"]
+  # Create AgentTeamRun + ConfigMap on each accepted webhook.
+  # Delete is needed for ConcurrencyPolicy: Replace.
+  - apiGroups: ["kagents.dev"]
+    resources: ["agentteamruns"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "create"]
+  # Read the per-trigger HMAC secret (referenced by name on the trigger).
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-trigger
+  labels:
+    app.kubernetes.io/name: kagents
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: trigger
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-trigger
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.trigger.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

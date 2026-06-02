@@ -1,0 +1,533 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.0
+  name: agentteamtriggers.kagents.dev
+spec:
+  group: kagents.dev
+  names:
+    kind: AgentTeamTrigger
+    listKind: AgentTeamTriggerList
+    plural: agentteamtriggers
+    singular: agentteamtrigger
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.trigger.webhook.path
+      name: Path
+      type: string
+    - jsonPath: .status.lastTriggeredAt
+      name: Last
+      type: date
+    - jsonPath: .status.activeRun
+      name: Active
+      type: string
+    - jsonPath: .status.totalRuns
+      name: Total
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AgentTeamTrigger creates AgentTeamRun instances in response to
+          events.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              AgentTeamTriggerSpec defines a webhook-driven AgentTeamRun creation
+              pattern. The kagents-trigger ingress deployment watches AgentTeamTrigger
+              resources, matches incoming HTTP requests against TriggerSource.Webhook,
+              applies HMAC validation + ConcurrencyPolicy, and creates one
+              AgentTeamRun per accepted event. The existing AgentTeamRun controller
+              then turns that Run into a team.
+
+              The trigger listener intentionally runs as its own Deployment
+              (kagents-trigger) rather than inside the operator manager: it's an
+              internet-reachable surface and shouldn't live inside the leader-elected
+              controller pod.
+            properties:
+              auth:
+                description: Auth is forwarded to every created AgentTeamRun.
+                properties:
+                  apiKeySecret:
+                    description: APIKeySecret references a Secret containing ANTHROPIC_API_KEY.
+                    type: string
+                  oauthSecret:
+                    description: OAuthSecret references a Secret containing OAuth
+                      tokens for subscription auth.
+                    type: string
+                type: object
+              concurrencyPolicy:
+                default: Allow
+                description: |-
+                  ConcurrencyPolicy governs what happens when a webhook fires while
+                  a previous run is still in-flight.
+
+                    - Allow   (default) — always create a new Run.
+                    - Forbid  — reject the webhook with 409 if ActiveRun is set.
+                    - Replace — delete the active Run, then create a new one.
+                enum:
+                - Allow
+                - Forbid
+                - Replace
+                type: string
+              lead:
+                description: Lead configures the team lead for every created AgentTeamRun.
+                properties:
+                  mcpServers:
+                    description: MCPServers configures Model Context Protocol connections
+                      for the lead agent.
+                    items:
+                      description: MCPServerSpec configures a Model Context Protocol
+                        server for an agent.
+                      properties:
+                        credentialsSecret:
+                          description: CredentialsSecret references a Secret containing
+                            an 'apiKey' key for bearer auth.
+                          type: string
+                        name:
+                          description: Name identifies this MCP server in the agent's
+                            config.
+                          type: string
+                        url:
+                          description: URL is the MCP server endpoint.
+                          type: string
+                      required:
+                      - name
+                      - url
+                      type: object
+                    type: array
+                  model:
+                    default: opus
+                    description: Model to use for the team lead.
+                    enum:
+                    - opus
+                    - sonnet
+                    - haiku
+                    type: string
+                  permissionMode:
+                    default: auto-accept
+                    description: PermissionMode controls how the lead handles permission
+                      requests.
+                    enum:
+                    - auto-accept
+                    - plan
+                    - default
+                    type: string
+                  prompt:
+                    description: Prompt is the initial instruction for the team lead.
+                    type: string
+                  resources:
+                    description: Resources defines compute resources for the lead
+                      pod.
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This field depends on the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                  skills:
+                    description: Skills to mount into .claude/skills/ for the lead
+                      agent.
+                    items:
+                      description: SkillSpec defines a Claude Code skill to mount
+                        into an agent pod.
+                      properties:
+                        name:
+                          description: Name is the skill directory name under .claude/skills/.
+                          type: string
+                        source:
+                          description: Source identifies where to load the skill from.
+                          properties:
+                            configMap:
+                              description: |-
+                                ConfigMap references a ConfigMap in the same namespace.
+                                Each key in the ConfigMap becomes a file in the skill directory.
+                              type: string
+                            oci:
+                              description: OCI is an OCI artifact reference containing
+                                the skill files (e.g. "ghcr.io/org/skills/web-research:v1").
+                              type: string
+                          type: object
+                      required:
+                      - name
+                      - source
+                      type: object
+                    type: array
+                required:
+                - prompt
+                type: object
+              lifecycle:
+                description: Lifecycle overrides forwarded to every created AgentTeamRun.
+                properties:
+                  approvalGates:
+                    description: |-
+                      ApprovalGates pause execution before specified events until human approval is recorded.
+                      Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true
+                    items:
+                      description: |-
+                        ApprovalGateSpec pauses execution before a named event until human approval is recorded.
+                        Approval is granted by adding the annotation approved.kagents.dev/{event}=true to the AgentTeam.
+                      properties:
+                        channel:
+                          default: none
+                          description: Channel is how the approval request notification
+                            is sent.
+                          enum:
+                          - webhook
+                          - none
+                          type: string
+                        event:
+                          description: Event is the gate identifier. Use "spawn-{teammate-name}"
+                            to gate spawning a specific teammate.
+                          type: string
+                        webhookUrl:
+                          description: WebhookURL to POST when this gate is triggered
+                            (used when channel is "webhook").
+                          type: string
+                      required:
+                      - event
+                      type: object
+                    type: array
+                  budgetLimit:
+                    description: BudgetLimit is the maximum API spend in USD before
+                      the team is terminated (e.g. "10.00").
+                    type: string
+                  consolidatedBranchTemplate:
+                    description: |-
+                      ConsolidatedBranchTemplate is a Go template rendered to produce the
+                      branch name pushed by OnComplete=push-branch. Available variables:
+                      .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
+                    type: string
+                  gitCredentialsSecret:
+                    description: |-
+                      GitCredentialsSecret names a Secret in the team's namespace carrying git
+                      push credentials. The Secret must contain either 'ssh-privatekey' or
+                      'token'. Used by OnComplete=push-branch (and OnComplete=create-pr when
+                      push-branch runs ahead of it). Falls back to Spec.Repository.CredentialsSecret
+                      when unset, so teams that already configured clone credentials with push
+                      scope don't need to duplicate.
+                    type: string
+                  githubTokenSecret:
+                    description: |-
+                      GitHubTokenSecret names a Secret in the team's namespace carrying a
+                      GitHub token under the key GITHUB_TOKEN. Used by OnComplete=create-pr
+                      (and OnComplete=push-branch, once implemented) to authenticate against
+                      the GitHub REST API.
+                    type: string
+                  maxRestarts:
+                    default: 3
+                    description: |-
+                      MaxRestarts bounds how many times each teammate pod may be re-spawned
+                      after a Failed phase before the team itself is marked Failed. The lead
+                      pod is not subject to this limit; a lead crash always fails the team.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  onComplete:
+                    default: notify
+                    description: OnComplete determines what happens when the team
+                      finishes.
+                    enum:
+                    - create-pr
+                    - push-branch
+                    - notify
+                    - none
+                    type: string
+                  prTitleTemplate:
+                    description: |-
+                      PRTitleTemplate overrides the title template used by OnComplete=create-pr.
+                      Available variables: .TeamName, .Namespace. When empty, falls back to
+                      Spec.Lifecycle.PullRequest.TitleTemplate, then to the default
+                      "claude-teams: {{.TeamName}}".
+                    type: string
+                  pullRequest:
+                    description: PullRequest configures PR creation when onComplete
+                      is "create-pr".
+                    properties:
+                      labels:
+                        description: Labels to apply to the PR.
+                        items:
+                          type: string
+                        type: array
+                      reviewers:
+                        description: Reviewers to request on the PR.
+                        items:
+                          type: string
+                        type: array
+                      targetBranch:
+                        default: main
+                        description: TargetBranch is the branch to open the PR against.
+                        type: string
+                      titleTemplate:
+                        description: |-
+                          TitleTemplate is a Go template for the PR title.
+                          Available variables: .TeamName, .Namespace
+                        type: string
+                    type: object
+                  timeout:
+                    default: 4h
+                    description: Timeout is the maximum duration the team can run
+                      (e.g. "4h", "30m").
+                    type: string
+                type: object
+              payloadInjection:
+                description: |-
+                  PayloadInjection configures how the incoming webhook payload is
+                  surfaced to the agent pods. The kagents-trigger creates a ConfigMap
+                  in the trigger's namespace carrying the request body, and adds a
+                  matching read-only volume mount to the resulting team's workspace
+                  inputs at PayloadInjection.MountPath.
+                properties:
+                  mountPath:
+                    description: |-
+                      MountPath is the absolute file path inside agent pods where the
+                      incoming webhook payload appears (e.g. "/workspace/data/trigger-payload.json").
+                      The directory is created if it doesn't exist; the file is read-only.
+                    type: string
+                required:
+                - mountPath
+                type: object
+              repository:
+                description: Repository overrides the repository for each Run (coding
+                  mode).
+                properties:
+                  branch:
+                    default: main
+                    description: Branch to clone and work from.
+                    type: string
+                  credentialsSecret:
+                    description: |-
+                      CredentialsSecret references a Secret containing git credentials.
+                      The secret should contain either 'ssh-privatekey' or 'token'.
+                    type: string
+                  url:
+                    description: URL is the git clone URL.
+                    type: string
+                  worktreeStrategy:
+                    default: per-teammate
+                    description: WorktreeStrategy determines how git worktrees are
+                      managed.
+                    enum:
+                    - per-teammate
+                    - shared
+                    type: string
+                required:
+                - url
+                type: object
+              templateRef:
+                description: TemplateRef names the AgentTeamTemplate to instantiate
+                  on each fire.
+                properties:
+                  name:
+                    description: Name of the AgentTeamTemplate in the same namespace.
+                    type: string
+                required:
+                - name
+                type: object
+              trigger:
+                description: |-
+                  Trigger defines which external signal fires this trigger.
+                  Today only Webhook is supported; future expansion (watchResource,
+                  schedule-on-event, etc.) is anticipated by the wrapper struct.
+                properties:
+                  webhook:
+                    description: |-
+                      Webhook fires the trigger when an HTTP POST arrives at the
+                      configured Path on the kagents-trigger service.
+                    properties:
+                      path:
+                        description: |-
+                          Path is the URL path on the trigger service that fires this trigger
+                          (e.g. "/hooks/new-deal"). Each trigger's Path must be unique within
+                          the cluster; the listener matches incoming requests by exact prefix.
+                        pattern: ^/[A-Za-z0-9._/-]+$
+                        type: string
+                      secret:
+                        description: |-
+                          Secret names a Secret in the trigger's namespace containing the
+                          shared secret used to validate the request's HMAC signature
+                          (key: "hmac-secret"). When empty, HMAC validation is skipped —
+                          recommended only for traffic that's already authenticated upstream
+                          (e.g. by an ingress with mTLS).
+                        type: string
+                    required:
+                    - path
+                    type: object
+                type: object
+              workspace:
+                description: Workspace overrides the workspace for each Run (Cowork
+                  mode).
+                properties:
+                  inputs:
+                    description: Inputs are read-only volumes mounted into all agent
+                      pods.
+                    items:
+                      description: WorkspaceInputSpec defines a read-only input mounted
+                        into the agent pod.
+                      properties:
+                        configMap:
+                          description: ConfigMap references a ConfigMap to mount as
+                            a directory.
+                          type: string
+                        mountPath:
+                          description: MountPath is where to mount this input inside
+                            the container.
+                          type: string
+                        pvc:
+                          description: PVC references an existing PersistentVolumeClaim
+                            to mount read-only.
+                          type: string
+                      required:
+                      - mountPath
+                      type: object
+                    type: array
+                  output:
+                    description: Output configures the shared writable output volume.
+                    properties:
+                      mountPath:
+                        default: /workspace/output
+                        description: MountPath inside the container where the output
+                          volume is mounted.
+                        type: string
+                      pvc:
+                        description: PVC is the name of an existing PVC to use. If
+                          empty, the operator creates one named "{team}-output".
+                        type: string
+                      size:
+                        default: 5Gi
+                        description: Size of the auto-created PVC.
+                        type: string
+                      storageClass:
+                        description: StorageClass for the auto-created PVC. Defaults
+                          to "nfs".
+                        type: string
+                    type: object
+                type: object
+            required:
+            - auth
+            - lead
+            - templateRef
+            - trigger
+            type: object
+          status:
+            description: AgentTeamTriggerStatus reports trigger bookkeeping.
+            properties:
+              activeRun:
+                description: |-
+                  ActiveRun names the in-flight AgentTeamRun, if any. Cleared once
+                  the underlying Run reaches a terminal phase.
+                type: string
+              lastTriggeredAt:
+                description: |-
+                  LastTriggeredAt is the most recent wall-clock time the listener
+                  accepted a webhook for this trigger and created a Run.
+                format: date-time
+                type: string
+              runs:
+                description: |-
+                  Runs is the recent history of Runs this trigger created. The
+                  reconciler maintains this from labeled AgentTeamRuns in the same
+                  namespace.
+                items:
+                  description: TriggerRunStatus records a single triggered fire.
+                  properties:
+                    name:
+                      description: Name is the AgentTeamRun resource name.
+                      type: string
+                    phase:
+                      description: Phase mirrors the AgentTeamRun's status.phase.
+                      type: string
+                    triggeredAt:
+                      description: TriggeredAt is when the listener accepted the webhook.
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - triggeredAt
+                  type: object
+                type: array
+              totalRuns:
+                description: |-
+                  TotalRuns is the total number of Runs this trigger has produced
+                  over its lifetime.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

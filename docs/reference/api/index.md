@@ -15,6 +15,7 @@ Package v1alpha1 contains API Schema definitions for the claude v1alpha1 API gro
 - [AgentTeamRun](#agentteamrun)
 - [AgentTeamSchedule](#agentteamschedule)
 - [AgentTeamTemplate](#agentteamtemplate)
+- [AgentTeamTrigger](#agentteamtrigger)
 
 
 
@@ -277,6 +278,78 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions track the latest validation state with structured reasons. |  | Optional: \{\} <br /> |
 
 
+#### AgentTeamTrigger
+
+
+
+AgentTeamTrigger creates AgentTeamRun instances in response to events.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `kagents.dev/v1alpha1` | | |
+| `kind` _string_ | `AgentTeamTrigger` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[AgentTeamTriggerSpec](#agentteamtriggerspec)_ |  |  |  |
+| `status` _[AgentTeamTriggerStatus](#agentteamtriggerstatus)_ |  |  |  |
+
+
+#### AgentTeamTriggerSpec
+
+
+
+AgentTeamTriggerSpec defines a webhook-driven AgentTeamRun creation
+pattern. The kagents-trigger ingress deployment watches AgentTeamTrigger
+resources, matches incoming HTTP requests against TriggerSource.Webhook,
+applies HMAC validation + ConcurrencyPolicy, and creates one
+AgentTeamRun per accepted event. The existing AgentTeamRun controller
+then turns that Run into a team.
+
+The trigger listener intentionally runs as its own Deployment
+(kagents-trigger) rather than inside the operator manager: it's an
+internet-reachable surface and shouldn't live inside the leader-elected
+controller pod.
+
+
+
+_Appears in:_
+- [AgentTeamTrigger](#agentteamtrigger)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `trigger` _[TriggerSource](#triggersource)_ | Trigger defines which external signal fires this trigger.<br />Today only Webhook is supported; future expansion (watchResource,<br />schedule-on-event, etc.) is anticipated by the wrapper struct. |  |  |
+| `templateRef` _[TemplateReference](#templatereference)_ | TemplateRef names the AgentTeamTemplate to instantiate on each fire. |  |  |
+| `auth` _[AuthSpec](#authspec)_ | Auth is forwarded to every created AgentTeamRun. |  |  |
+| `lead` _[LeadSpec](#leadspec)_ | Lead configures the team lead for every created AgentTeamRun. |  |  |
+| `repository` _[RepositorySpec](#repositoryspec)_ | Repository overrides the repository for each Run (coding mode). |  | Optional: \{\} <br /> |
+| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace overrides the workspace for each Run (Cowork mode). |  | Optional: \{\} <br /> |
+| `lifecycle` _[LifecycleSpec](#lifecyclespec)_ | Lifecycle overrides forwarded to every created AgentTeamRun. |  | Optional: \{\} <br /> |
+| `payloadInjection` _[PayloadInjectionSpec](#payloadinjectionspec)_ | PayloadInjection configures how the incoming webhook payload is<br />surfaced to the agent pods. The kagents-trigger creates a ConfigMap<br />in the trigger's namespace carrying the request body, and adds a<br />matching read-only volume mount to the resulting team's workspace<br />inputs at PayloadInjection.MountPath. |  | Optional: \{\} <br /> |
+| `concurrencyPolicy` _string_ | ConcurrencyPolicy governs what happens when a webhook fires while<br />a previous run is still in-flight.<br />  - Allow   (default) — always create a new Run.<br />  - Forbid  — reject the webhook with 409 if ActiveRun is set.<br />  - Replace — delete the active Run, then create a new one. | Allow | Enum: [Allow Forbid Replace] <br />Optional: \{\} <br /> |
+
+
+#### AgentTeamTriggerStatus
+
+
+
+AgentTeamTriggerStatus reports trigger bookkeeping.
+
+
+
+_Appears in:_
+- [AgentTeamTrigger](#agentteamtrigger)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `lastTriggeredAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | LastTriggeredAt is the most recent wall-clock time the listener<br />accepted a webhook for this trigger and created a Run. |  | Optional: \{\} <br /> |
+| `activeRun` _string_ | ActiveRun names the in-flight AgentTeamRun, if any. Cleared once<br />the underlying Run reaches a terminal phase. |  | Optional: \{\} <br /> |
+| `totalRuns` _integer_ | TotalRuns is the total number of Runs this trigger has produced<br />over its lifetime. |  |  |
+| `runs` _[TriggerRunStatus](#triggerrunstatus) array_ | Runs is the recent history of Runs this trigger created. The<br />reconciler maintains this from labeled AgentTeamRuns in the same<br />namespace. |  | Optional: \{\} <br /> |
+
+
 #### ApprovalGateSpec
 
 
@@ -328,6 +401,7 @@ _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
 - [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -407,6 +481,7 @@ _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
 - [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -431,6 +506,7 @@ _Appears in:_
 - [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
 - [AgentTeamTemplateSpec](#agentteamtemplatespec)
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -517,6 +593,22 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `path` _string_ | Path is the absolute filesystem path on the producer pod where the<br />teammate writes the artifact. For Cowork teams this is typically a<br />path under the team's output mount (e.g. /workspace/output/findings.md). |  |  |
 | `description` _string_ | Description is an optional human-readable summary of the artifact. |  | Optional: \{\} <br /> |
+
+
+#### PayloadInjectionSpec
+
+
+
+PayloadInjectionSpec configures payload mounting on triggered teams.
+
+
+
+_Appears in:_
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `mountPath` _string_ | MountPath is the absolute file path inside agent pods where the<br />incoming webhook payload appears (e.g. "/workspace/data/trigger-payload.json").<br />The directory is created if it doesn't exist; the file is read-only. |  |  |
 
 
 #### PipelineSpec
@@ -623,6 +715,7 @@ _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
 - [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -820,10 +913,46 @@ TemplateReference points to an AgentTeamTemplate.
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
 - [AgentTeamScheduleSpec](#agentteamschedulespec)
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `name` _string_ | Name of the AgentTeamTemplate in the same namespace. |  |  |
+
+
+#### TriggerRunStatus
+
+
+
+TriggerRunStatus records a single triggered fire.
+
+
+
+_Appears in:_
+- [AgentTeamTriggerStatus](#agentteamtriggerstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the AgentTeamRun resource name. |  |  |
+| `triggeredAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | TriggeredAt is when the listener accepted the webhook. |  |  |
+| `phase` _string_ | Phase mirrors the AgentTeamRun's status.phase. |  | Optional: \{\} <br /> |
+
+
+#### TriggerSource
+
+
+
+TriggerSource is a discriminated union of supported trigger types.
+Exactly one inner field should be set.
+
+
+
+_Appears in:_
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `webhook` _[WebhookTriggerSpec](#webhooktriggerspec)_ | Webhook fires the trigger when an HTTP POST arrives at the<br />configured Path on the kagents-trigger service. |  | Optional: \{\} <br /> |
 
 
 #### WebhookSpec
@@ -841,6 +970,23 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `url` _string_ | URL to POST events to. |  |  |
 | `events` _string array_ | Events to send notifications for. |  | MinItems: 1 <br /> |
+
+
+#### WebhookTriggerSpec
+
+
+
+WebhookTriggerSpec configures a webhook trigger.
+
+
+
+_Appears in:_
+- [TriggerSource](#triggersource)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `path` _string_ | Path is the URL path on the trigger service that fires this trigger<br />(e.g. "/hooks/new-deal"). Each trigger's Path must be unique within<br />the cluster; the listener matches incoming requests by exact prefix. |  | Pattern: `^/[A-Za-z0-9._/-]+$` <br /> |
+| `secret` _string_ | Secret names a Secret in the trigger's namespace containing the<br />shared secret used to validate the request's HMAC signature<br />(key: "hmac-secret"). When empty, HMAC validation is skipped —<br />recommended only for traffic that's already authenticated upstream<br />(e.g. by an ingress with mTLS). |  | Optional: \{\} <br /> |
 
 
 #### WorkspaceInputSpec
@@ -893,6 +1039,7 @@ _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
 - [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
+- [AgentTeamTriggerSpec](#agentteamtriggerspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
