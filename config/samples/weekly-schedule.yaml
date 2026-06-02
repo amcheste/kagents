@@ -1,0 +1,53 @@
+# AgentTeamSchedule sample — a cron-triggered weekly report team.
+#
+# Behavior:
+#   - At 06:00 every Monday (operator local time) the schedule controller
+#     creates a fresh AgentTeamRun from the named template, parameterized
+#     with the workspace/auth/lead/lifecycle below.
+#   - The existing AgentTeamRun controller then resolves the template and
+#     creates the AgentTeam — schedules don't run teams themselves, they
+#     produce the same Run objects a human would create by hand.
+#   - Status reports lastScheduledAt / nextScheduledAt / activeRun and a
+#     trimmed history of the most recent 5 Runs (older completed Runs and
+#     their AgentTeamRun objects are garbage-collected).
+#
+# Idempotency: each fire produces a Run named deterministically as
+# {schedule-name}-{unix-timestamp-of-fire-window}. A reconcile that
+# crashes mid-fire and retries hits AlreadyExists and stays correct;
+# the operator never double-fires the same window.
+#
+# Apply with:
+#   kubectl apply -n cowork-agents -f config/samples/weekly-schedule.yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeamSchedule
+metadata:
+  name: weekly-standup-summary
+  namespace: cowork-agents
+spec:
+  schedule: "0 6 * * MON"
+
+  templateRef:
+    name: standup-summarizer
+
+  auth:
+    apiKeySecret: anthropic-api-key
+
+  lead:
+    model: opus
+    prompt: |
+      Coordinate the weekly standup summary. Assign research and writing
+      tracks per the template.
+
+  workspace:
+    inputs:
+      - configMap: team-channels
+        mountPath: /workspace/data
+    output:
+      mountPath: /workspace/output
+      size: 1Gi
+
+  lifecycle:
+    timeout: "1h"
+    budgetLimit: "10.00"
+
+  historyLimit: 5
