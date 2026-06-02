@@ -211,3 +211,72 @@ dashboard:
   tolerations: []
   affinity: {}
   podAnnotations: {}
+
+# Webhook trigger listener (kagents-trigger). Off by default — flip
+# trigger.enabled to deploy the HTTP listener that converts incoming
+# webhooks into AgentTeamRun resources matched by AgentTeamTrigger CRDs.
+#
+# The listener runs in its own pod with its own ServiceAccount. RBAC
+# scope is cluster-wide on AgentTeamTrigger / AgentTeamRun (matches by
+# CRD path can't be namespace-bounded) and limited to get on Secrets
+# (for HMAC validation). It does not touch AgentTeam resources directly.
+trigger:
+  enabled: false
+
+  image:
+    repository: ghcr.io/amcheste/kagents-trigger
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  serviceAccount:
+    create: true
+    name: kagents-trigger
+
+  service:
+    type: ClusterIP
+    port: 8090
+
+  # Ingress for exposing the trigger to upstream webhook senders.
+  # Off by default — most users put their own ingress (with TLS + auth)
+  # in front and either point it at the ClusterIP service or set their
+  # own ingress.className/host below.
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: triggers.kagents.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}

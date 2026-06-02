@@ -1,0 +1,54 @@
+# AgentTeamTrigger sample — a webhook that fires an onboarding team
+# whenever a new deal closes upstream.
+#
+# Behavior:
+#   - The kagents-trigger deployment (Helm value trigger.enabled=true)
+#     serves the configured webhook path. Every accepted POST creates a
+#     fresh AgentTeamRun from the named template.
+#   - The incoming JSON payload is stored as a per-fire ConfigMap and
+#     mounted read-only at /workspace/data/trigger-payload.json so the
+#     agents can read it directly.
+#   - HMAC validation is enforced: requests must carry an
+#     X-Hub-Signature-256 header whose value matches
+#     "sha256=" + hex(hmac_sha256(secret, body)). The secret comes from
+#     the named Secret resource (key: hmac-secret).
+#   - ConcurrencyPolicy: Allow means a new Run is always created on a
+#     valid fire, even if a previous one is still in flight.
+#
+# Apply with:
+#   kubectl create secret generic webhook-hmac-secret -n cowork-agents \
+#     --from-literal=hmac-secret="<your-shared-secret>"
+#   kubectl apply -n cowork-agents -f config/samples/webhook-trigger.yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeamTrigger
+metadata:
+  name: new-deal-onboarding
+  namespace: cowork-agents
+spec:
+  trigger:
+    webhook:
+      path: /hooks/new-deal
+      secret: webhook-hmac-secret
+
+  templateRef:
+    name: deal-onboarding-team
+
+  auth:
+    apiKeySecret: anthropic-api-key
+
+  lead:
+    model: opus
+    prompt: |
+      A new deal has closed. Coordinate the onboarding flow per the
+      template; the deal payload is mounted at
+      /workspace/data/trigger-payload.json.
+
+  workspace:
+    output:
+      mountPath: /workspace/output
+      size: 1Gi
+
+  payloadInjection:
+    mountPath: /workspace/data/trigger-payload.json
+
+  concurrencyPolicy: Allow

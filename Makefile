@@ -3,6 +3,7 @@
 IMG ?= ghcr.io/amcheste/kagents:latest
 CLAUDE_CODE_IMG ?= ghcr.io/amcheste/claude-code-runner:latest
 DASHBOARD_IMG ?= ghcr.io/amcheste/claude-teams-dashboard:latest
+TRIGGER_IMG ?= ghcr.io/amcheste/kagents-trigger:latest
 KIND_CLUSTER_NAME ?= claude-teams
 
 # Tool versions
@@ -68,6 +69,10 @@ docker-build-runner: ## Build Claude Code runner Docker image
 .PHONY: docker-build-dashboard
 docker-build-dashboard: ## Build dashboard web UI Docker image
 	docker build -t $(DASHBOARD_IMG) -f docker/Dockerfile.dashboard .
+
+.PHONY: docker-build-trigger
+docker-build-trigger: ## Build kagents-trigger webhook listener Docker image
+	docker build -t $(TRIGGER_IMG) -f docker/Dockerfile.trigger .
 
 .PHONY: docker-push
 docker-push: ## Push operator image
