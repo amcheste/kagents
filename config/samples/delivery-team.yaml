@@ -1,0 +1,68 @@
+# Delivery sample — fire notifications when a team completes.
+#
+# When the team reaches Completed phase, the operator iterates each
+# entry in spec.lifecycle.delivery and dispatches it to the matching
+# sender. Per-target success/failure lands in status.delivery; one
+# target failing does not roll the team back to Failed.
+#
+# This sample uses the two MVP backends: webhook (raw HTTP POST) and
+# slack (formatted message via incoming-webhook URL stored in a Secret).
+# The API also defines `email` and `google-drive` types — they parse
+# successfully but their senders return "not implemented" so the team
+# will record a per-target failure if either is used today.
+#
+# Setup before applying:
+#   kubectl -n cowork-agents create secret generic slack-creds \
+#     --from-literal=slack-webhook-url='https://hooks.slack.com/services/T000/B000/XXX'
+#
+# Apply with:
+#   kubectl apply -n cowork-agents -f config/samples/delivery-team.yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeam
+metadata:
+  name: weekly-digest
+  namespace: cowork-agents
+spec:
+  workspace:
+    output:
+      mountPath: "/workspace/output"
+      size: "1Gi"
+
+  auth:
+    apiKeySecret: "anthropic-api-key"
+
+  lead:
+    model: "opus"
+    prompt: |
+      Produce a one-page weekly status digest summarizing the team's
+      recent activity. Save as /workspace/output/digest.md.
+
+  teammates:
+    - name: "writer"
+      model: "sonnet"
+      prompt: |
+        Write the digest content. When done, save to
+        /workspace/output/digest.md.
+      outputs:
+        - path: "/workspace/output/digest.md"
+          description: "Weekly status digest."
+
+  lifecycle:
+    onComplete: deliver
+    delivery:
+      # Webhook delivery — POSTs a metadata envelope (event, team,
+      # namespace, phase, message, artifacts) as application/json. The
+      # receiver is expected to fetch artifact files separately from
+      # wherever they're persisted; the operator does not stream bytes.
+      - type: webhook
+        url: "https://ops.example.com/hooks/team-completed"
+        message: "Weekly digest finished."
+
+      # Slack delivery — the operator loads slack-webhook-url from the
+      # CredentialsSecret at dispatch time and POSTs a formatted message
+      # to it. Channel is optional and only meaningful for generic
+      # incoming-webhook integrations not already scoped to a channel.
+      - type: slack
+        channel: "#weekly-digest"
+        message: "Fresh digest is in. Artifact list below."
+        credentialsSecret: "slack-creds"
