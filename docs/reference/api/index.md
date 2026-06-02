@@ -13,6 +13,7 @@ Package v1alpha1 contains API Schema definitions for the claude v1alpha1 API gro
 ### Resource Types
 - [AgentTeam](#agentteam)
 - [AgentTeamRun](#agentteamrun)
+- [AgentTeamSchedule](#agentteamschedule)
 - [AgentTeamTemplate](#agentteamtemplate)
 
 
@@ -92,6 +93,73 @@ _Appears in:_
 | `auth` _[AuthSpec](#authspec)_ | Auth configures API authentication for this run. |  |  |
 | `lead` _[LeadSpec](#leadspec)_ | Lead configures the team lead for this run. |  |  |
 | `lifecycle` _[LifecycleSpec](#lifecyclespec)_ | Lifecycle overrides for this run. |  | Optional: \{\} <br /> |
+
+
+#### AgentTeamSchedule
+
+
+
+AgentTeamSchedule creates AgentTeamRun instances on a cron schedule.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `kagents.dev/v1alpha1` | | |
+| `kind` _string_ | `AgentTeamSchedule` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[AgentTeamScheduleSpec](#agentteamschedulespec)_ |  |  |  |
+| `status` _[AgentTeamScheduleStatus](#agentteamschedulestatus)_ |  |  |  |
+
+
+#### AgentTeamScheduleSpec
+
+
+
+AgentTeamScheduleSpec defines a cron-triggered pattern for creating
+AgentTeamRun instances. On each fire, the operator creates one
+AgentTeamRun from the referenced AgentTeamTemplate, parameterized
+with the schedule's repository/workspace/auth/lead/lifecycle fields.
+The existing AgentTeamRun controller then turns that Run into an
+AgentTeam — schedules don't create teams directly, they produce
+the same Run objects a human would create by hand.
+
+
+
+_Appears in:_
+- [AgentTeamSchedule](#agentteamschedule)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `schedule` _string_ | Schedule is a five-field cron expression in the operator's local<br />time zone (e.g. "0 6 * * MON" for Monday 06:00). Parsed by<br />robfig/cron/v3 with the standard parser. |  |  |
+| `templateRef` _[TemplateReference](#templatereference)_ | TemplateRef names the AgentTeamTemplate to instantiate on each fire. |  |  |
+| `auth` _[AuthSpec](#authspec)_ | Auth is forwarded to every created AgentTeamRun. |  |  |
+| `lead` _[LeadSpec](#leadspec)_ | Lead configures the team lead for every created AgentTeamRun. |  |  |
+| `repository` _[RepositorySpec](#repositoryspec)_ | Repository overrides the repository for each Run (coding mode). |  | Optional: \{\} <br /> |
+| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace overrides the workspace for each Run (Cowork mode). |  | Optional: \{\} <br /> |
+| `lifecycle` _[LifecycleSpec](#lifecyclespec)_ | Lifecycle overrides forwarded to every created AgentTeamRun. |  | Optional: \{\} <br /> |
+| `historyLimit` _integer_ | HistoryLimit caps how many completed Runs are retained in<br />status.runs[] and on the cluster. Once exceeded, the oldest<br />completed Runs are deleted. Set to 0 (or omit) to keep all Runs. |  | Minimum: 0 <br />Optional: \{\} <br /> |
+
+
+#### AgentTeamScheduleStatus
+
+
+
+AgentTeamScheduleStatus reports cron progress and Run history.
+
+
+
+_Appears in:_
+- [AgentTeamSchedule](#agentteamschedule)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `lastScheduledAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | LastScheduledAt is when the most recent fire occurred (the schedule<br />time that triggered Run creation, not the wall-clock reconcile time). |  | Optional: \{\} <br /> |
+| `nextScheduledAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | NextScheduledAt is the time of the next scheduled fire as computed<br />from the cron expression. |  | Optional: \{\} <br /> |
+| `activeRun` _string_ | ActiveRun names the in-flight AgentTeamRun, if any. Empty when no<br />run is currently executing. |  | Optional: \{\} <br /> |
+| `runs` _[ScheduledRunStatus](#scheduledrunstatus) array_ | Runs is the recent history of Runs this schedule created. Truncated<br />to HistoryLimit (oldest entries dropped first). |  | Optional: \{\} <br /> |
 
 
 #### AgentTeamSpec
@@ -258,6 +326,7 @@ AuthSpec defines Anthropic API authentication.
 
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
+- [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
 
 | Field | Description | Default | Validation |
@@ -336,6 +405,7 @@ LeadSpec defines the team lead configuration.
 
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
+- [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
 
 | Field | Description | Default | Validation |
@@ -358,6 +428,7 @@ LifecycleSpec controls team runtime behavior.
 
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
+- [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
 - [AgentTeamTemplateSpec](#agentteamtemplatespec)
 
@@ -550,6 +621,7 @@ RepositorySpec defines the git repository configuration.
 
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
+- [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
 
 | Field | Description | Default | Validation |
@@ -558,6 +630,24 @@ _Appears in:_
 | `branch` _string_ | Branch to clone and work from. | main |  |
 | `worktreeStrategy` _string_ | WorktreeStrategy determines how git worktrees are managed. | per-teammate | Enum: [per-teammate shared] <br /> |
 | `credentialsSecret` _string_ | CredentialsSecret references a Secret containing git credentials.<br />The secret should contain either 'ssh-privatekey' or 'token'. |  | Optional: \{\} <br /> |
+
+
+#### ScheduledRunStatus
+
+
+
+ScheduledRunStatus records a single fire's bookkeeping.
+
+
+
+_Appears in:_
+- [AgentTeamScheduleStatus](#agentteamschedulestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the AgentTeamRun resource name. |  |  |
+| `scheduledAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | ScheduledAt is the cron-computed time this run was triggered for. |  |  |
+| `phase` _string_ | Phase mirrors the underlying AgentTeamRun's last observed status.phase. |  | Optional: \{\} <br /> |
 
 
 #### ScopeSpec
@@ -729,6 +819,7 @@ TemplateReference points to an AgentTeamTemplate.
 
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
+- [AgentTeamScheduleSpec](#agentteamschedulespec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -800,6 +891,7 @@ Use this instead of (or alongside) Repository for knowledge-work tasks.
 
 _Appears in:_
 - [AgentTeamRunSpec](#agentteamrunspec)
+- [AgentTeamScheduleSpec](#agentteamschedulespec)
 - [AgentTeamSpec](#agentteamspec)
 
 | Field | Description | Default | Validation |
