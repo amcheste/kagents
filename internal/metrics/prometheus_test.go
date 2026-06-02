@@ -25,6 +25,11 @@ func resetState(t *testing.T) {
 	teammateRestarts.Reset()
 	teamBudgetRemaining.Reset()
 	teammateIdle.Reset()
+	pipelineStageActive.Reset()
+	pipelineStageDuration.Reset()
+	teamArtifactsProduced.Reset()
+	teamDeliverySuccess.Reset()
+	teamDeliveryFailure.Reset()
 }
 
 func TestRegisterMetricsIsIdempotent(t *testing.T) {
@@ -171,6 +176,12 @@ func TestMetricsExposeExpectedNames(t *testing.T) {
 		"claude_teammate_restarts_total",
 		"claude_team_budget_remaining_usd",
 		"claude_teammate_idle_seconds",
+		// kagents_* — knowledge-work observability (v0.8.0+).
+		"kagents_team_pipeline_stage_active",
+		"kagents_team_stage_duration_seconds",
+		"kagents_team_artifacts_produced_total",
+		"kagents_team_delivery_success_total",
+		"kagents_team_delivery_failure_total",
 	}
 
 	// Collect descriptors rather than observations — Vec collectors with no
@@ -215,4 +226,39 @@ func TestMetricsHelpTextHasClaudePrefix(t *testing.T) {
 		help := strings.ToLower(mf.GetHelp())
 		assert.NotEmpty(t, help, "metric %s missing help text", mf.GetName())
 	}
+}
+
+// --- Knowledge-work observability (v0.8.0+) ---
+
+func TestSetPipelineStageActive_FlipsGauge(t *testing.T) {
+	resetState(t)
+	SetPipelineStageActive("team-a", "ns1", "research", true)
+	assert.Equal(t, 1.0, testutil.ToFloat64(pipelineStageActive.WithLabelValues("team-a", "ns1", "research")))
+	SetPipelineStageActive("team-a", "ns1", "research", false)
+	assert.Equal(t, 0.0, testutil.ToFloat64(pipelineStageActive.WithLabelValues("team-a", "ns1", "research")))
+}
+
+func TestObservePipelineStageDuration_RecordsObservation(t *testing.T) {
+	resetState(t)
+	ObservePipelineStageDuration("team-a", "ns1", "analysis", 42)
+	// CollectAndCount on a histogram returns 1 once any observation has landed.
+	assert.Equal(t, 1, testutil.CollectAndCount(pipelineStageDuration))
+}
+
+func TestRecordArtifactProduced_Increments(t *testing.T) {
+	resetState(t)
+	RecordArtifactProduced("team-a", "ns1", "writer")
+	RecordArtifactProduced("team-a", "ns1", "writer")
+	assert.Equal(t, 2.0, testutil.ToFloat64(teamArtifactsProduced.WithLabelValues("team-a", "ns1", "writer")))
+}
+
+func TestRecordDelivery_SuccessAndFailureAreSeparate(t *testing.T) {
+	resetState(t)
+	RecordDeliverySuccess("team-a", "ns1", "webhook")
+	RecordDeliveryFailure("team-a", "ns1", "slack")
+	assert.Equal(t, 1.0, testutil.ToFloat64(teamDeliverySuccess.WithLabelValues("team-a", "ns1", "webhook")))
+	assert.Equal(t, 1.0, testutil.ToFloat64(teamDeliveryFailure.WithLabelValues("team-a", "ns1", "slack")))
+	// Counters are independent — labelling success vs failure on the
+	// SAME (team, type) tuple must not collide.
+	assert.Equal(t, 0.0, testutil.ToFloat64(teamDeliveryFailure.WithLabelValues("team-a", "ns1", "webhook")))
 }

@@ -21,6 +21,10 @@ spec:
     - jsonPath: .status.ready
       name: Ready
       type: string
+    - jsonPath: .status.pipeline.currentStage
+      name: Stage
+      priority: 1
+      type: string
     - jsonPath: .status.tasks.completed
       name: Tasks Done
       type: integer
