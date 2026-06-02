@@ -468,6 +468,48 @@ spec:
                       items:
                         type: string
                       type: array
+                    inputs:
+                      description: |-
+                        Inputs declares the upstream-produced artifacts this teammate
+                        consumes. Each entry names a producer teammate (From) and an
+                        artifact basename (Artifact); the operator (a) treats From as
+                        an implicit dependency — this teammate is not spawned until the
+                        producer reaches Completed — and (b) wires an init container that
+                        stages the artifact at MountPath on this teammate's pod before
+                        the main container starts.
+                      items:
+                        description: |-
+                          InputSpec declares an artifact this teammate consumes from an upstream
+                          teammate's outputs. The operator (a) treats From as an implicit
+                          dependency — this teammate is not spawned until the producer reaches
+                          Completed — and (b) wires an init container that copies the named
+                          artifact onto MountPath on this teammate's pod before the main
+                          container starts. The final on-pod path is {MountPath}/{Artifact}.
+                        properties:
+                          artifact:
+                            description: |-
+                              Artifact is the basename of the producer's output file
+                              (e.g. "findings.md" for an output path of /workspace/output/findings.md).
+                              The operator resolves the full source path by scanning the named
+                              producer's Outputs[] for an entry whose Path basename matches.
+                            type: string
+                          from:
+                            description: From names the upstream teammate that produces
+                              the artifact.
+                            type: string
+                          mountPath:
+                            description: |-
+                              MountPath is the absolute directory path on this teammate's pod
+                              where the artifact will be made available. The operator creates
+                              an emptyDir at MountPath and stages the artifact there via an
+                              init container; the main container sees {MountPath}/{Artifact}.
+                            type: string
+                        required:
+                        - artifact
+                        - from
+                        - mountPath
+                        type: object
+                      type: array
                     mcpServers:
                       description: MCPServers configures Model Context Protocol connections
                         for this teammate.
@@ -503,6 +545,33 @@ spec:
                       description: Name is the unique identifier for this teammate.
                       pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
                       type: string
+                    outputs:
+                      description: |-
+                        Outputs declares the artifacts this teammate produces. Each entry
+                        records a file path the teammate's prompt is expected to write.
+                        On completion the operator records every declared output in
+                        AgentTeam.Status.Artifacts and makes them available to any
+                        downstream teammate that consumes them via Inputs.
+                      items:
+                        description: |-
+                          OutputSpec declares a file an agent produces. Downstream teammates
+                          consume it by declaring a matching InputSpec; the operator also
+                          records each output in AgentTeam.Status.Artifacts on completion.
+                        properties:
+                          description:
+                            description: Description is an optional human-readable
+                              summary of the artifact.
+                            type: string
+                          path:
+                            description: |-
+                              Path is the absolute filesystem path on the producer pod where the
+                              teammate writes the artifact. For Cowork teams this is typically a
+                              path under the team's output mount (e.g. /workspace/output/findings.md).
+                            type: string
+                        required:
+                        - path
+                        type: object
+                      type: array
                     prompt:
                       description: Prompt is the spawn instruction for this teammate.
                       type: string
@@ -675,6 +744,43 @@ spec:
           status:
             description: AgentTeamStatus defines the observed state of an AgentTeam.
             properties:
+              artifacts:
+                description: |-
+                  Artifacts records the files produced by teammates that declared
+                  Outputs in their spec. Populated as each producer teammate reaches
+                  Completed; the operator does not retroactively scan teammate pods
+                  for undeclared files.
+                items:
+                  description: |-
+                    ArtifactStatus records a single artifact produced by a teammate that
+                    declared a matching OutputSpec.
+                  properties:
+                    name:
+                      description: Name is the basename of the artifact file (e.g.
+                        "findings.md").
+                      type: string
+                    path:
+                      description: |-
+                        Path is the producer pod's filesystem path where the artifact was
+                        written (mirrors OutputSpec.Path).
+                      type: string
+                    producedAt:
+                      description: |-
+                        ProducedAt is when the operator recorded the artifact — typically
+                        the first reconcile after the producer pod reached Succeeded.
+                      format: date-time
+                      type: string
+                    producedBy:
+                      description: ProducedBy is the name of the teammate that produced
+                        this artifact.
+                      type: string
+                  required:
+                  - name
+                  - path
+                  - producedAt
+                  - producedBy
+                  type: object
+                type: array
               completedAt:
                 description: CompletedAt is when the team finished execution.
                 format: date-time

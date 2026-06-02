@@ -236,6 +236,24 @@ type TeammateSpec struct {
 	// +optional
 	DependsOn []string `json:"dependsOn,omitempty"`
 
+	// Outputs declares the artifacts this teammate produces. Each entry
+	// records a file path the teammate's prompt is expected to write.
+	// On completion the operator records every declared output in
+	// AgentTeam.Status.Artifacts and makes them available to any
+	// downstream teammate that consumes them via Inputs.
+	// +optional
+	Outputs []OutputSpec `json:"outputs,omitempty"`
+
+	// Inputs declares the upstream-produced artifacts this teammate
+	// consumes. Each entry names a producer teammate (From) and an
+	// artifact basename (Artifact); the operator (a) treats From as
+	// an implicit dependency — this teammate is not spawned until the
+	// producer reaches Completed — and (b) wires an init container that
+	// stages the artifact at MountPath on this teammate's pod before
+	// the main container starts.
+	// +optional
+	Inputs []InputSpec `json:"inputs,omitempty"`
+
 	// Skills to mount into .claude/skills/ for this teammate.
 	// +optional
 	Skills []SkillSpec `json:"skills,omitempty"`
@@ -247,6 +265,43 @@ type TeammateSpec struct {
 	// Resources defines compute resources for this teammate's pod.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+// OutputSpec declares a file an agent produces. Downstream teammates
+// consume it by declaring a matching InputSpec; the operator also
+// records each output in AgentTeam.Status.Artifacts on completion.
+type OutputSpec struct {
+	// Path is the absolute filesystem path on the producer pod where the
+	// teammate writes the artifact. For Cowork teams this is typically a
+	// path under the team's output mount (e.g. /workspace/output/findings.md).
+	Path string `json:"path"`
+
+	// Description is an optional human-readable summary of the artifact.
+	// +optional
+	Description string `json:"description,omitempty"`
+}
+
+// InputSpec declares an artifact this teammate consumes from an upstream
+// teammate's outputs. The operator (a) treats From as an implicit
+// dependency — this teammate is not spawned until the producer reaches
+// Completed — and (b) wires an init container that copies the named
+// artifact onto MountPath on this teammate's pod before the main
+// container starts. The final on-pod path is {MountPath}/{Artifact}.
+type InputSpec struct {
+	// From names the upstream teammate that produces the artifact.
+	From string `json:"from"`
+
+	// Artifact is the basename of the producer's output file
+	// (e.g. "findings.md" for an output path of /workspace/output/findings.md).
+	// The operator resolves the full source path by scanning the named
+	// producer's Outputs[] for an entry whose Path basename matches.
+	Artifact string `json:"artifact"`
+
+	// MountPath is the absolute directory path on this teammate's pod
+	// where the artifact will be made available. The operator creates
+	// an emptyDir at MountPath and stages the artifact there via an
+	// init container; the main container sees {MountPath}/{Artifact}.
+	MountPath string `json:"mountPath"`
 }
 
 // ScopeSpec restricts file access for a teammate.
@@ -470,6 +525,13 @@ type AgentTeamStatus struct {
 	// +optional
 	ConsolidatedBranch string `json:"consolidatedBranch,omitempty"`
 
+	// Artifacts records the files produced by teammates that declared
+	// Outputs in their spec. Populated as each producer teammate reaches
+	// Completed; the operator does not retroactively scan teammate pods
+	// for undeclared files.
+	// +optional
+	Artifacts []ArtifactStatus `json:"artifacts,omitempty"`
+
 	// Conditions represent the latest available observations.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -507,6 +569,24 @@ type TeammateStatus struct {
 	// teammate's RestartCount reaches Spec.Lifecycle.MaxRestarts.
 	// +optional
 	RestartCount int32 `json:"restartCount,omitempty"`
+}
+
+// ArtifactStatus records a single artifact produced by a teammate that
+// declared a matching OutputSpec.
+type ArtifactStatus struct {
+	// Name is the basename of the artifact file (e.g. "findings.md").
+	Name string `json:"name"`
+
+	// Path is the producer pod's filesystem path where the artifact was
+	// written (mirrors OutputSpec.Path).
+	Path string `json:"path"`
+
+	// ProducedBy is the name of the teammate that produced this artifact.
+	ProducedBy string `json:"producedBy"`
+
+	// ProducedAt is when the operator recorded the artifact — typically
+	// the first reconcile after the producer pod reached Succeeded.
+	ProducedAt metav1.Time `json:"producedAt"`
 }
 
 // TaskSummary reports aggregate task progress.

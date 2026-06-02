@@ -429,7 +429,7 @@ func TestBuildAgentPod_CodingMode(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	assert.Equal(t, "pod-test-worker", pod.Name)
 	assert.Equal(t, corev1.RestartPolicyNever, pod.Spec.RestartPolicy)
@@ -450,7 +450,7 @@ func TestBuildAgentPod_LeadHasNoWorktreePath(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "lead", "opus", "lead prompt", "auto-accept", true,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	env := envMap(pod)
 	_, hasWorktree := env["WORKTREE_PATH"]
@@ -467,7 +467,7 @@ func TestBuildAgentPod_WithSkills(t *testing.T) {
 	}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, skills, nil)
+		corev1.ResourceRequirements{}, nil, skills, nil, nil)
 
 	volNames := volumeNames(pod)
 	assert.Contains(t, volNames, "skill-web-research")
@@ -486,7 +486,7 @@ func TestBuildAgentPod_WithMCPServers(t *testing.T) {
 	}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, mcpServers)
+		corev1.ResourceRequirements{}, nil, nil, mcpServers, nil)
 
 	volNames := volumeNames(pod)
 	assert.Contains(t, volNames, "mcp-config")
@@ -503,7 +503,7 @@ func TestBuildAgentPod_CoworkMode(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	volNames := volumeNames(pod)
 	assert.Contains(t, volNames, "workspace-output")
@@ -526,7 +526,7 @@ func TestBuildAgentPod_ScopeEnvVars(t *testing.T) {
 	}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, scope, nil, nil)
+		corev1.ResourceRequirements{}, scope, nil, nil, nil)
 
 	env := envMap(pod)
 	assert.Equal(t, "internal/:api/", env["SCOPE_INCLUDE_PATHS"])
@@ -960,7 +960,7 @@ func TestBuildAgentPod_OAuthAuth(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	// ANTHROPIC_API_KEY must NOT be injected when OAuth is configured.
 	env := envMap(pod)
@@ -985,7 +985,7 @@ func TestBuildAgentPod_AgentCommandOverride(t *testing.T) {
 	r.AgentCommand = []string{"sh", "-c", "exit 0"}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	assert.Equal(t, []string{"sh", "-c", "exit 0"}, pod.Spec.Containers[0].Command,
 		"AgentCommand override must be applied to the container spec")
@@ -1136,7 +1136,7 @@ func TestBuildAgentPod_CoworkMode_PVCInput(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	// The PVC-backed input must appear as workspace-input-0 and be read-only.
 	var inputVol *corev1.Volume
@@ -1418,7 +1418,7 @@ func TestEnsureAgentPod_WithMCPServers_CreatesConfigMapBeforePod(t *testing.T) {
 	}
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, servers))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, servers, nil))
 
 	// The ConfigMap must exist — otherwise the pod's mcp-config volume would
 	// fail to mount on a real cluster.
@@ -1457,11 +1457,11 @@ func TestEnsureAgentPod_Idempotent(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil))
 
 	// Second call must be a no-op — no error, pod still present.
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil),
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil),
 		"ensureAgentPod must be idempotent so repeated reconciles don't fail")
 
 	var pod corev1.Pod
@@ -1480,7 +1480,7 @@ func TestEnsureAgentPod_NoMCPServers_SkipsConfigMap(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil))
 
 	var cm corev1.ConfigMap
 	err := r.Get(ctx, types.NamespacedName{
@@ -1952,4 +1952,216 @@ func TestRecordEvent_NilRecorderIsNoop(t *testing.T) {
 	assert.NotPanics(t, func() {
 		r.recordEvent(team, corev1.EventTypeNormal, "Test", "no panic with nil recorder")
 	})
+}
+
+// --- Output routing (Outputs / Inputs / ArtifactStatus) ---
+
+// TestEffectiveDependencies covers the merge of explicit DependsOn with
+// implicit Inputs[].From producers. The result is what spawn-time
+// dependency checks should wait for, deduped and order-preserving.
+func TestEffectiveDependencies(t *testing.T) {
+	cases := []struct {
+		name string
+		tm   claudev1alpha1.TeammateSpec
+		want []string
+	}{
+		{
+			name: "empty",
+			tm:   claudev1alpha1.TeammateSpec{Name: "x"},
+			want: []string{},
+		},
+		{
+			name: "only DependsOn",
+			tm:   claudev1alpha1.TeammateSpec{Name: "writer", DependsOn: []string{"researcher"}},
+			want: []string{"researcher"},
+		},
+		{
+			name: "only Inputs",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:   "writer",
+				Inputs: []claudev1alpha1.InputSpec{{From: "researcher", Artifact: "findings.md", MountPath: "/in"}},
+			},
+			want: []string{"researcher"},
+		},
+		{
+			name: "both with overlap deduped",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:      "writer",
+				DependsOn: []string{"researcher"},
+				Inputs: []claudev1alpha1.InputSpec{
+					{From: "researcher", Artifact: "findings.md", MountPath: "/in"},
+				},
+			},
+			want: []string{"researcher"},
+		},
+		{
+			name: "merge distinct + preserve DependsOn first",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:      "writer",
+				DependsOn: []string{"a"},
+				Inputs: []claudev1alpha1.InputSpec{
+					{From: "b", Artifact: "x.md", MountPath: "/x"},
+					{From: "a", Artifact: "y.md", MountPath: "/y"}, // dup of DependsOn
+					{From: "c", Artifact: "z.md", MountPath: "/z"},
+				},
+			},
+			want: []string{"a", "b", "c"},
+		},
+		{
+			name: "empty From in Inputs ignored",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:   "writer",
+				Inputs: []claudev1alpha1.InputSpec{{From: "", Artifact: "x.md", MountPath: "/x"}},
+			},
+			want: []string{},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := effectiveDependencies(c.tm)
+			assert.Equal(t, c.want, got)
+		})
+	}
+}
+
+// TestFindProducerOutputPath resolves a producer's output path by basename.
+func TestFindProducerOutputPath(t *testing.T) {
+	team := &claudev1alpha1.AgentTeam{
+		Spec: claudev1alpha1.AgentTeamSpec{
+			Teammates: []claudev1alpha1.TeammateSpec{
+				{
+					Name: "researcher",
+					Outputs: []claudev1alpha1.OutputSpec{
+						{Path: "/workspace/output/findings.md"},
+						{Path: "/workspace/output/summary.txt"},
+					},
+				},
+				{
+					Name: "writer",
+					Outputs: []claudev1alpha1.OutputSpec{
+						{Path: "/workspace/output/report.pdf"},
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, "/workspace/output/findings.md",
+		findProducerOutputPath(team, "researcher", "findings.md"))
+	assert.Equal(t, "/workspace/output/summary.txt",
+		findProducerOutputPath(team, "researcher", "summary.txt"))
+	assert.Equal(t, "/workspace/output/report.pdf",
+		findProducerOutputPath(team, "writer", "report.pdf"))
+
+	// Unknown producer → empty.
+	assert.Empty(t, findProducerOutputPath(team, "ghost", "findings.md"))
+	// Known producer, unknown artifact → empty.
+	assert.Empty(t, findProducerOutputPath(team, "researcher", "missing.md"))
+}
+
+// TestRecordTeammateArtifacts is idempotent and only records declared outputs.
+func TestRecordTeammateArtifacts(t *testing.T) {
+	team := minimalTeam("artifacts")
+	tm := claudev1alpha1.TeammateSpec{
+		Name: "researcher",
+		Outputs: []claudev1alpha1.OutputSpec{
+			{Path: "/workspace/output/findings.md", Description: "research"},
+			{Path: "/workspace/output/summary.txt"},
+		},
+	}
+
+	now := time.Now()
+	recordTeammateArtifacts(team, tm, now)
+	require.Len(t, team.Status.Artifacts, 2)
+	assert.Equal(t, "findings.md", team.Status.Artifacts[0].Name)
+	assert.Equal(t, "/workspace/output/findings.md", team.Status.Artifacts[0].Path)
+	assert.Equal(t, "researcher", team.Status.Artifacts[0].ProducedBy)
+	assert.WithinDuration(t, now, team.Status.Artifacts[0].ProducedAt.Time, time.Second)
+
+	// Second call must not duplicate.
+	recordTeammateArtifacts(team, tm, now.Add(time.Hour))
+	assert.Len(t, team.Status.Artifacts, 2, "recordTeammateArtifacts must be idempotent")
+
+	// A teammate with no outputs is a no-op.
+	recordTeammateArtifacts(team, claudev1alpha1.TeammateSpec{Name: "x"}, now)
+	assert.Len(t, team.Status.Artifacts, 2)
+}
+
+// TestBuildAgentPod_OutputRouting_AddsInitContainerAndEmptyDir verifies the
+// pod-builder integration: a consumer with Inputs gets a per-input emptyDir
+// volume, a corresponding main-container mount, and an init container that
+// stages the producer's output file at the requested mountPath.
+func TestBuildAgentPod_OutputRouting_AddsInitContainerAndEmptyDir(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := minimalTeam("routed")
+	team.Spec.Workspace = &claudev1alpha1.WorkspaceSpec{
+		Output: &claudev1alpha1.WorkspaceOutputSpec{
+			Size:      "1Gi",
+			MountPath: "/workspace/output",
+		},
+	}
+	// Producer is declared at the spec level (operator scans team.Spec.Teammates
+	// to resolve the producer's output path during build).
+	team.Spec.Teammates = []claudev1alpha1.TeammateSpec{
+		{
+			Name: "researcher",
+			Outputs: []claudev1alpha1.OutputSpec{
+				{Path: "/workspace/output/findings.md"},
+			},
+		},
+	}
+
+	inputs := []claudev1alpha1.InputSpec{
+		{From: "researcher", Artifact: "findings.md", MountPath: "/workspace/stage/research"},
+	}
+
+	pod := r.buildAgentPod(team, "writer", "sonnet", "draft the report", "auto-accept",
+		false, corev1.ResourceRequirements{}, nil, nil, nil, inputs)
+
+	// One init container, one new emptyDir volume.
+	require.Len(t, pod.Spec.InitContainers, 1, "one init container per input")
+	require.Equal(t, "stage-input-0", pod.Spec.InitContainers[0].Name)
+	require.Contains(t, pod.Spec.InitContainers[0].Command[2], "/workspace/output/findings.md",
+		"init container must read the producer's declared output path")
+	require.Contains(t, pod.Spec.InitContainers[0].Command[2], "/workspace/stage/research/findings.md",
+		"init container must write to {mountPath}/{artifact}")
+
+	// Main container mounts the emptyDir at the consumer-requested mountPath.
+	var mainMount *corev1.VolumeMount
+	for i := range pod.Spec.Containers[0].VolumeMounts {
+		if pod.Spec.Containers[0].VolumeMounts[i].MountPath == "/workspace/stage/research" {
+			mainMount = &pod.Spec.Containers[0].VolumeMounts[i]
+		}
+	}
+	require.NotNil(t, mainMount, "main container must mount the input emptyDir at the consumer's mountPath")
+	assert.Equal(t, "input-0", mainMount.Name)
+	assert.True(t, mainMount.ReadOnly, "main container should not mutate staged inputs")
+
+	// Volume exists.
+	var inputVol *corev1.Volume
+	for i := range pod.Spec.Volumes {
+		if pod.Spec.Volumes[i].Name == "input-0" {
+			inputVol = &pod.Spec.Volumes[i]
+		}
+	}
+	require.NotNil(t, inputVol)
+	require.NotNil(t, inputVol.EmptyDir, "input volume must be an emptyDir")
+}
+
+// TestBuildAgentPod_OutputRouting_SkipsUnresolvedInput tolerates a misconfigured
+// input (no matching producer) by silently dropping the staging — the pod
+// still launches.
+func TestBuildAgentPod_OutputRouting_SkipsUnresolvedInput(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := minimalTeam("unresolved")
+	team.Spec.Workspace = &claudev1alpha1.WorkspaceSpec{
+		Output: &claudev1alpha1.WorkspaceOutputSpec{Size: "1Gi"},
+	}
+	inputs := []claudev1alpha1.InputSpec{
+		{From: "ghost", Artifact: "nope.md", MountPath: "/stage"},
+	}
+	pod := r.buildAgentPod(team, "writer", "sonnet", "p", "auto-accept",
+		false, corev1.ResourceRequirements{}, nil, nil, nil, inputs)
+	assert.Empty(t, pod.Spec.InitContainers,
+		"unresolved input must not produce a stale init container")
 }
