@@ -216,6 +216,7 @@ _Appears in:_
 | `consolidatedBranch` _string_ | ConsolidatedBranch is the branch name pushed by OnComplete=push-branch.<br />Populated once the push-branch Job succeeds; OnComplete=create-pr reads<br />this as the PR head branch when set, in place of Spec.Repository.Branch. |  | Optional: \{\} <br /> |
 | `artifacts` _[ArtifactStatus](#artifactstatus) array_ | Artifacts records the files produced by teammates that declared<br />Outputs in their spec. Populated as each producer teammate reaches<br />Completed; the operator does not retroactively scan teammate pods<br />for undeclared files. |  | Optional: \{\} <br /> |
 | `pipeline` _[PipelineStatus](#pipelinestatus)_ | Pipeline reports stage-level progress when spec.pipeline is set.<br />Recomputed every reconcile from teammate pod phases; cleared if<br />spec.pipeline is removed. |  | Optional: \{\} <br /> |
+| `delivery` _[DeliveryStatus](#deliverystatus) array_ | Delivery records the outcome of every DeliveryTarget dispatched<br />by OnComplete=deliver. Populated once executeOnComplete has run;<br />each entry is independent — partial success is normal and the<br />team is not rolled back when individual targets fail. |  | Optional: \{\} <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations. |  | Optional: \{\} <br /> |
 
 
@@ -446,6 +447,61 @@ _Appears in:_
 | `beads` _[BeadsSpec](#beadsspec)_ | Beads configures optional Beads integration for persistent tracking. |  | Optional: \{\} <br /> |
 
 
+#### DeliveryStatus
+
+
+
+DeliveryStatus records the result of a single DeliveryTarget dispatch.
+
+
+
+_Appears in:_
+- [AgentTeamStatus](#agentteamstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _string_ | Type mirrors the originating DeliveryTarget.Type. |  |  |
+| `target` _string_ | Target is a short human-readable label describing where this<br />delivery went (e.g. "#reports" for slack, the URL for webhook). |  | Optional: \{\} <br /> |
+| `deliveredAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | DeliveredAt is when the sender finished — whether successfully<br />or not. |  |  |
+| `success` _boolean_ | Success is true iff the sender returned no error. |  |  |
+| `error` _string_ | Error carries the sender's failure message when Success is false. |  | Optional: \{\} <br /> |
+
+
+#### DeliveryTarget
+
+
+
+DeliveryTarget describes one artifact delivery destination fired when
+OnComplete=deliver. The Type discriminator selects which fields are
+meaningful — webhook + slack are functional in v0.8.0; email and
+google-drive are accepted at the API level and dispatched to senders
+that currently return a "not implemented" error recorded in
+status.delivery[].
+
+Across all types the operator never persists credentials itself; the
+sender pulls them from CredentialsSecret at dispatch time so a
+compromised operator pod can't enumerate Slack tokens / SMTP
+passwords / Drive service-account keys at rest.
+
+
+
+_Appears in:_
+- [LifecycleSpec](#lifecyclespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _string_ | Type names the delivery backend. |  | Enum: [webhook slack email google-drive] <br /> |
+| `artifactPath` _string_ | ArtifactPath is the file path within the team's output workspace<br />(typically /workspace/output) to attach to or send as the<br />delivery body. Optional for delivery types that carry their<br />message inline (e.g. a plain Slack notification with no file). |  | Optional: \{\} <br /> |
+| `message` _string_ | Message is the human-readable text that accompanies the delivery<br />(Slack message text, webhook notes, email body lead-in). |  | Optional: \{\} <br /> |
+| `url` _string_ | URL is the destination for the webhook delivery type. |  | Optional: \{\} <br /> |
+| `channel` _string_ | Channel is the destination for the slack delivery type<br />(e.g. "#reports"). The slack sender reads<br />CredentialsSecret["slack-webhook-url"] to know where to post. |  | Optional: \{\} <br /> |
+| `to` _string array_ | To is the recipient list for the email delivery type. |  | Optional: \{\} <br /> |
+| `subject` _string_ | Subject is the message subject for the email delivery type. |  | Optional: \{\} <br /> |
+| `attachmentPath` _string_ | AttachmentPath is a file path within the team's output workspace<br />to attach to the email delivery. Equivalent to ArtifactPath but<br />kept distinct because some emails attach + reference a separate<br />artifact in the body. |  | Optional: \{\} <br /> |
+| `folder` _string_ | Folder is the destination folder for the google-drive delivery<br />type. |  | Optional: \{\} <br /> |
+| `credentialsSecret` _string_ | CredentialsSecret names a Secret in the team's namespace carrying<br />authentication for this target. Expected keys per type:<br />  - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL<br />  - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"<br />  - google-drive: "service-account.json"<br />Not required for webhook; the URL is in the spec. |  | Optional: \{\} <br /> |
+
+
 #### InputSpec
 
 
@@ -512,7 +568,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `timeout` _string_ | Timeout is the maximum duration the team can run (e.g. "4h", "30m"). | 4h |  |
 | `budgetLimit` _string_ | BudgetLimit is the maximum API spend in USD before the team is terminated (e.g. "10.00"). |  | Optional: \{\} <br /> |
-| `onComplete` _string_ | OnComplete determines what happens when the team finishes. | notify | Enum: [create-pr push-branch notify none] <br /> |
+| `onComplete` _string_ | OnComplete determines what happens when the team finishes. | notify | Enum: [create-pr push-branch notify deliver none] <br /> |
+| `delivery` _[DeliveryTarget](#deliverytarget) array_ | Delivery is the list of artifact delivery targets fired when<br />OnComplete=deliver. Each target is dispatched independently;<br />per-target success/failure is recorded in status.delivery[].<br />Delivery failure is best-effort — the team is not rolled back to<br />Failed if a target rejects the request. |  | Optional: \{\} <br /> |
 | `pullRequest` _[PullRequestSpec](#pullrequestspec)_ | PullRequest configures PR creation when onComplete is "create-pr". |  | Optional: \{\} <br /> |
 | `approvalGates` _[ApprovalGateSpec](#approvalgatespec) array_ | ApprovalGates pause execution before specified events until human approval is recorded.<br />Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true |  | Optional: \{\} <br /> |
 | `maxRestarts` _integer_ | MaxRestarts bounds how many times each teammate pod may be re-spawned<br />after a Failed phase before the team itself is marked Failed. The lead<br />pod is not subject to this limit; a lead crash always fails the team. | 3 | Minimum: 0 <br />Optional: \{\} <br /> |

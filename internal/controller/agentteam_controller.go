@@ -26,6 +26,7 @@ import (
 
 	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 	"github.com/amcheste/kagents/internal/budget"
+	"github.com/amcheste/kagents/internal/delivery"
 	"github.com/amcheste/kagents/internal/github"
 	"github.com/amcheste/kagents/internal/harness"
 	"github.com/amcheste/kagents/internal/metrics"
@@ -80,6 +81,23 @@ type AgentTeamReconciler struct {
 	// Unit tests that construct a reconciler directly may leave this nil;
 	// harnessFor falls back to a built-in claude-code adapter in that case.
 	Harnesses map[string]harness.Harness
+
+	// Delivery dispatches DeliveryTarget instances when OnComplete=deliver.
+	// Tests inject a Dispatcher with stub senders; production wires
+	// delivery.NewDispatcher() in cmd/manager. May be nil — a default
+	// production dispatcher is constructed on demand.
+	Delivery *delivery.Dispatcher
+}
+
+// deliveryDispatcher returns the configured Delivery dispatcher or a
+// freshly-built default. Centralizing the fallback keeps unit tests that
+// don't populate Delivery working and gives misconfigured reconcilers a
+// safe default rather than a nil-deref.
+func (r *AgentTeamReconciler) deliveryDispatcher() *delivery.Dispatcher {
+	if r.Delivery != nil {
+		return r.Delivery
+	}
+	return delivery.NewDispatcher()
 }
 
 // harnessFor returns the [harness.Harness] adapter that should drive the
@@ -1607,8 +1625,47 @@ func (r *AgentTeamReconciler) executeOnComplete(ctx context.Context, team *claud
 		} else {
 			log.Info("push-branch: consolidated branch pushed", "branch", team.Status.ConsolidatedBranch)
 		}
+	case "deliver":
+		r.executeDelivery(ctx, team)
 	}
 	return nil
+}
+
+// executeDelivery dispatches each DeliveryTarget in spec.lifecycle.delivery
+// to its registered sender, recording a DeliveryStatus entry per target
+// on team.Status.Delivery regardless of outcome. Failures are surfaced
+// as events + status but never return as errors — the design's stance
+// is that delivery is best-effort and a partial delivery (e.g. Slack
+// posted, email broke) shouldn't fail the team retroactively.
+//
+// Idempotent at the executeOnComplete level: the caller only invokes
+// this once per team's lifecycle (when transitioning to a terminal
+// phase). The function itself doesn't guard against re-invocation —
+// the reconciler's transition logic is the gate.
+func (r *AgentTeamReconciler) executeDelivery(ctx context.Context, team *claudev1alpha1.AgentTeam) {
+	if team.Spec.Lifecycle == nil || len(team.Spec.Lifecycle.Delivery) == 0 {
+		return
+	}
+	dispatcher := r.deliveryDispatcher()
+	now := time.Now()
+	for _, target := range team.Spec.Lifecycle.Delivery {
+		status := claudev1alpha1.DeliveryStatus{
+			Type:        target.Type,
+			Target:      delivery.TargetLabel(target),
+			DeliveredAt: metav1.NewTime(now),
+			Success:     true,
+		}
+		if err := dispatcher.Send(ctx, r.Client, target, team); err != nil {
+			status.Success = false
+			status.Error = err.Error()
+			r.recordEvent(team, corev1.EventTypeWarning, "DeliveryFailed",
+				"Delivery %s to %s failed: %v", target.Type, status.Target, err)
+		} else {
+			r.recordEvent(team, corev1.EventTypeNormal, "DeliveryComplete",
+				"Delivery %s to %s succeeded", target.Type, status.Target)
+		}
+		team.Status.Delivery = append(team.Status.Delivery, status)
+	}
 }
 
 // --- Pull Request Creation ---

@@ -260,6 +260,94 @@ spec:
                       branch name pushed by OnComplete=push-branch. Available variables:
                       .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
                     type: string
+                  delivery:
+                    description: |-
+                      Delivery is the list of artifact delivery targets fired when
+                      OnComplete=deliver. Each target is dispatched independently;
+                      per-target success/failure is recorded in status.delivery[].
+                      Delivery failure is best-effort — the team is not rolled back to
+                      Failed if a target rejects the request.
+                    items:
+                      description: |-
+                        DeliveryTarget describes one artifact delivery destination fired when
+                        OnComplete=deliver. The Type discriminator selects which fields are
+                        meaningful — webhook + slack are functional in v0.8.0; email and
+                        google-drive are accepted at the API level and dispatched to senders
+                        that currently return a "not implemented" error recorded in
+                        status.delivery[].
+
+                        Across all types the operator never persists credentials itself; the
+                        sender pulls them from CredentialsSecret at dispatch time so a
+                        compromised operator pod can't enumerate Slack tokens / SMTP
+                        passwords / Drive service-account keys at rest.
+                      properties:
+                        artifactPath:
+                          description: |-
+                            ArtifactPath is the file path within the team's output workspace
+                            (typically /workspace/output) to attach to or send as the
+                            delivery body. Optional for delivery types that carry their
+                            message inline (e.g. a plain Slack notification with no file).
+                          type: string
+                        attachmentPath:
+                          description: |-
+                            AttachmentPath is a file path within the team's output workspace
+                            to attach to the email delivery. Equivalent to ArtifactPath but
+                            kept distinct because some emails attach + reference a separate
+                            artifact in the body.
+                          type: string
+                        channel:
+                          description: |-
+                            Channel is the destination for the slack delivery type
+                            (e.g. "#reports"). The slack sender reads
+                            CredentialsSecret["slack-webhook-url"] to know where to post.
+                          type: string
+                        credentialsSecret:
+                          description: |-
+                            CredentialsSecret names a Secret in the team's namespace carrying
+                            authentication for this target. Expected keys per type:
+
+                              - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL
+                              - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"
+                              - google-drive: "service-account.json"
+
+                            Not required for webhook; the URL is in the spec.
+                          type: string
+                        folder:
+                          description: |-
+                            Folder is the destination folder for the google-drive delivery
+                            type.
+                          type: string
+                        message:
+                          description: |-
+                            Message is the human-readable text that accompanies the delivery
+                            (Slack message text, webhook notes, email body lead-in).
+                          type: string
+                        subject:
+                          description: Subject is the message subject for the email
+                            delivery type.
+                          type: string
+                        to:
+                          description: To is the recipient list for the email delivery
+                            type.
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type names the delivery backend.
+                          enum:
+                          - webhook
+                          - slack
+                          - email
+                          - google-drive
+                          type: string
+                        url:
+                          description: URL is the destination for the webhook delivery
+                            type.
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    type: array
                   gitCredentialsSecret:
                     description: |-
                       GitCredentialsSecret names a Secret in the team's namespace carrying git
@@ -293,6 +381,7 @@ spec:
                     - create-pr
                     - push-branch
                     - notify
+                    - deliver
                     - none
                     type: string
                   prTitleTemplate:

@@ -413,9 +413,17 @@ type LifecycleSpec struct {
 	BudgetLimit *string `json:"budgetLimit,omitempty"`
 
 	// OnComplete determines what happens when the team finishes.
-	// +kubebuilder:validation:Enum=create-pr;push-branch;notify;none
+	// +kubebuilder:validation:Enum=create-pr;push-branch;notify;deliver;none
 	// +kubebuilder:default="notify"
 	OnComplete string `json:"onComplete,omitempty"`
+
+	// Delivery is the list of artifact delivery targets fired when
+	// OnComplete=deliver. Each target is dispatched independently;
+	// per-target success/failure is recorded in status.delivery[].
+	// Delivery failure is best-effort — the team is not rolled back to
+	// Failed if a target rejects the request.
+	// +optional
+	Delivery []DeliveryTarget `json:"delivery,omitempty"`
 
 	// PullRequest configures PR creation when onComplete is "create-pr".
 	// +optional
@@ -462,6 +470,76 @@ type LifecycleSpec struct {
 	// .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
 	// +optional
 	ConsolidatedBranchTemplate string `json:"consolidatedBranchTemplate,omitempty"`
+}
+
+// DeliveryTarget describes one artifact delivery destination fired when
+// OnComplete=deliver. The Type discriminator selects which fields are
+// meaningful — webhook + slack are functional in v0.8.0; email and
+// google-drive are accepted at the API level and dispatched to senders
+// that currently return a "not implemented" error recorded in
+// status.delivery[].
+//
+// Across all types the operator never persists credentials itself; the
+// sender pulls them from CredentialsSecret at dispatch time so a
+// compromised operator pod can't enumerate Slack tokens / SMTP
+// passwords / Drive service-account keys at rest.
+type DeliveryTarget struct {
+	// Type names the delivery backend.
+	// +kubebuilder:validation:Enum=webhook;slack;email;google-drive
+	Type string `json:"type"`
+
+	// ArtifactPath is the file path within the team's output workspace
+	// (typically /workspace/output) to attach to or send as the
+	// delivery body. Optional for delivery types that carry their
+	// message inline (e.g. a plain Slack notification with no file).
+	// +optional
+	ArtifactPath string `json:"artifactPath,omitempty"`
+
+	// Message is the human-readable text that accompanies the delivery
+	// (Slack message text, webhook notes, email body lead-in).
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// URL is the destination for the webhook delivery type.
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// Channel is the destination for the slack delivery type
+	// (e.g. "#reports"). The slack sender reads
+	// CredentialsSecret["slack-webhook-url"] to know where to post.
+	// +optional
+	Channel string `json:"channel,omitempty"`
+
+	// To is the recipient list for the email delivery type.
+	// +optional
+	To []string `json:"to,omitempty"`
+
+	// Subject is the message subject for the email delivery type.
+	// +optional
+	Subject string `json:"subject,omitempty"`
+
+	// AttachmentPath is a file path within the team's output workspace
+	// to attach to the email delivery. Equivalent to ArtifactPath but
+	// kept distinct because some emails attach + reference a separate
+	// artifact in the body.
+	// +optional
+	AttachmentPath string `json:"attachmentPath,omitempty"`
+
+	// Folder is the destination folder for the google-drive delivery
+	// type.
+	// +optional
+	Folder string `json:"folder,omitempty"`
+
+	// CredentialsSecret names a Secret in the team's namespace carrying
+	// authentication for this target. Expected keys per type:
+	//
+	//   - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL
+	//   - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"
+	//   - google-drive: "service-account.json"
+	//
+	// Not required for webhook; the URL is in the spec.
+	// +optional
+	CredentialsSecret string `json:"credentialsSecret,omitempty"`
 }
 
 // PullRequestSpec configures automatic PR creation.
@@ -594,6 +672,13 @@ type AgentTeamStatus struct {
 	// +optional
 	Pipeline *PipelineStatus `json:"pipeline,omitempty"`
 
+	// Delivery records the outcome of every DeliveryTarget dispatched
+	// by OnComplete=deliver. Populated once executeOnComplete has run;
+	// each entry is independent — partial success is normal and the
+	// team is not rolled back when individual targets fail.
+	// +optional
+	Delivery []DeliveryStatus `json:"delivery,omitempty"`
+
 	// Conditions represent the latest available observations.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -631,6 +716,28 @@ type TeammateStatus struct {
 	// teammate's RestartCount reaches Spec.Lifecycle.MaxRestarts.
 	// +optional
 	RestartCount int32 `json:"restartCount,omitempty"`
+}
+
+// DeliveryStatus records the result of a single DeliveryTarget dispatch.
+type DeliveryStatus struct {
+	// Type mirrors the originating DeliveryTarget.Type.
+	Type string `json:"type"`
+
+	// Target is a short human-readable label describing where this
+	// delivery went (e.g. "#reports" for slack, the URL for webhook).
+	// +optional
+	Target string `json:"target,omitempty"`
+
+	// DeliveredAt is when the sender finished — whether successfully
+	// or not.
+	DeliveredAt metav1.Time `json:"deliveredAt"`
+
+	// Success is true iff the sender returned no error.
+	Success bool `json:"success"`
+
+	// Error carries the sender's failure message when Success is false.
+	// +optional
+	Error string `json:"error,omitempty"`
 }
 
 // PipelineStatus reports stage-level progress for a pipelined team.
