@@ -2018,7 +2018,10 @@ func TestEffectiveDependencies(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := effectiveDependencies(c.tm)
+			// nil team here — these cases exercise the DependsOn + Inputs paths
+			// only; pipeline mode is covered by a separate TestPipelineDependencies
+			// pair of tests below.
+			got := effectiveDependencies(nil, c.tm)
 			assert.Equal(t, c.want, got)
 		})
 	}
@@ -2146,6 +2149,220 @@ func TestBuildAgentPod_OutputRouting_AddsInitContainerAndEmptyDir(t *testing.T) 
 	}
 	require.NotNil(t, inputVol)
 	require.NotNil(t, inputVol.EmptyDir, "input volume must be an emptyDir")
+}
+
+// --- Pipeline stages ---
+
+// pipelineTeam builds a 4-stage pipeline fixture (research → analysis ×3
+// fanout → synthesis → distribution with stage-level approval) shared by
+// several pipeline tests below.
+func pipelineTeam(name string) *claudev1alpha1.AgentTeam {
+	team := minimalTeam(name)
+	team.Spec.Teammates = []claudev1alpha1.TeammateSpec{
+		{Name: "data-analyst"},
+		{Name: "market-analyst"},
+		{Name: "financial-analyst"},
+		{Name: "competitive-analyst"},
+		{Name: "report-writer"},
+		{Name: "email-drafter"},
+	}
+	team.Spec.Pipeline = &claudev1alpha1.PipelineSpec{
+		Stages: []claudev1alpha1.StageSpec{
+			{Name: "research", Teammates: []string{"data-analyst"}},
+			{Name: "analysis", Teammates: []string{"market-analyst", "financial-analyst", "competitive-analyst"}, DependsOn: []string{"research"}, Fan: "parallel"},
+			{Name: "synthesis", Teammates: []string{"report-writer"}, DependsOn: []string{"analysis"}, Fan: "merge"},
+			{Name: "distribution", Teammates: []string{"email-drafter"}, DependsOn: []string{"synthesis"}, ApprovalRequired: true},
+		},
+	}
+	return team
+}
+
+func TestStageForTeammate(t *testing.T) {
+	team := pipelineTeam("stage-lookup")
+
+	for _, tt := range []struct {
+		tm    string
+		stage string
+		ok    bool
+	}{
+		{"data-analyst", "research", true},
+		{"market-analyst", "analysis", true},
+		{"financial-analyst", "analysis", true},
+		{"report-writer", "synthesis", true},
+		{"email-drafter", "distribution", true},
+		{"ghost", "", false},
+	} {
+		t.Run(tt.tm, func(t *testing.T) {
+			got, ok := stageForTeammate(team, tt.tm)
+			assert.Equal(t, tt.ok, ok)
+			if ok {
+				assert.Equal(t, tt.stage, got.Name)
+			}
+		})
+	}
+
+	// No pipeline → never found.
+	flat := minimalTeam("flat")
+	_, ok := stageForTeammate(flat, "any")
+	assert.False(t, ok, "no pipeline → stageForTeammate must return false")
+}
+
+func TestPipelineDependencies(t *testing.T) {
+	team := pipelineTeam("pipeline-deps")
+
+	// research has no upstream stages.
+	assert.Nil(t, pipelineDependencies(team, "data-analyst"))
+
+	// analysis depends on research → data-analyst.
+	assert.Equal(t, []string{"data-analyst"}, pipelineDependencies(team, "market-analyst"))
+
+	// synthesis depends on analysis → all three analysts.
+	assert.ElementsMatch(t, []string{"market-analyst", "financial-analyst", "competitive-analyst"},
+		pipelineDependencies(team, "report-writer"))
+
+	// distribution depends on synthesis → report-writer.
+	assert.Equal(t, []string{"report-writer"}, pipelineDependencies(team, "email-drafter"))
+
+	// Unknown teammate → nil.
+	assert.Nil(t, pipelineDependencies(team, "ghost"))
+}
+
+func TestEffectiveDependencies_PipelineMode(t *testing.T) {
+	team := pipelineTeam("pipeline-effective")
+
+	// report-writer in synthesis stage; pipeline depends on the 3 analysts.
+	// It also declares no per-teammate DependsOn (CEL forbids it under pipeline).
+	tm := team.Spec.Teammates[4] // report-writer
+	got := effectiveDependencies(team, tm)
+	assert.ElementsMatch(t, []string{"market-analyst", "financial-analyst", "competitive-analyst"}, got)
+
+	// With pipeline + Inputs, both contribute.
+	tm.Inputs = []claudev1alpha1.InputSpec{{From: "external-data", Artifact: "x.md", MountPath: "/in"}}
+	got = effectiveDependencies(team, tm)
+	assert.ElementsMatch(t,
+		[]string{"market-analyst", "financial-analyst", "competitive-analyst", "external-data"},
+		got)
+}
+
+func TestStageApprovalGranted(t *testing.T) {
+	team := pipelineTeam("stage-approval")
+	dist := team.Spec.Pipeline.Stages[3]
+	research := team.Spec.Pipeline.Stages[0]
+
+	// research has no ApprovalRequired → always granted.
+	assert.True(t, stageApprovalGranted(team, research))
+
+	// distribution has ApprovalRequired, no annotation → not granted.
+	assert.False(t, stageApprovalGranted(team, dist))
+
+	// Add the annotation → granted.
+	team.Annotations = map[string]string{"approved.kagents.dev/stage-distribution": "true"}
+	assert.True(t, stageApprovalGranted(team, dist))
+
+	// Wrong value → not granted.
+	team.Annotations["approved.kagents.dev/stage-distribution"] = "no"
+	assert.False(t, stageApprovalGranted(team, dist))
+}
+
+func TestUpdatePipelineStatus_PhaseTransitions(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := pipelineTeam("status-transitions")
+	now := time.Unix(1700000000, 0).UTC()
+
+	// 1) No teammate has spawned yet → research Waiting (no upstream blocker),
+	//    downstream Waiting on upstream.
+	team.Status.Teammates = []claudev1alpha1.TeammateStatus{
+		{Name: "data-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "market-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "financial-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "competitive-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "report-writer", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "email-drafter", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+	}
+	r.updatePipelineStatus(team, now)
+	require.NotNil(t, team.Status.Pipeline)
+	assert.Equal(t, 4, team.Status.Pipeline.StagesTotal)
+	assert.Equal(t, 0, team.Status.Pipeline.StagesCompleted)
+	assert.Equal(t, "research", team.Status.Pipeline.CurrentStage)
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[0].Phase, "research Waiting at start")
+	assert.Equal(t, "0/1", team.Status.Pipeline.Stages[0].TeammatesReady)
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[1].Phase, "analysis Waiting on research")
+
+	// 2) data-analyst running → research Running.
+	team.Status.Teammates[0].Phase = "Running"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Running", team.Status.Pipeline.Stages[0].Phase)
+	require.NotNil(t, team.Status.Pipeline.Stages[0].StartedAt, "StartedAt populated on first non-Waiting")
+
+	// 3) data-analyst completed → research Completed, analysis transitions Running once a teammate spawns.
+	team.Status.Teammates[0].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[0].Phase)
+	require.NotNil(t, team.Status.Pipeline.Stages[0].CompletedAt)
+	assert.Equal(t, "1/1", team.Status.Pipeline.Stages[0].TeammatesReady)
+	assert.Equal(t, 1, team.Status.Pipeline.StagesCompleted)
+	assert.Equal(t, "analysis", team.Status.Pipeline.CurrentStage)
+	// analysis upstream ready, no teammate spawned yet → Waiting.
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[1].Phase)
+
+	// 4) Two analysts done, one running → analysis Running, 2/3 ready.
+	team.Status.Teammates[1].Phase = "Completed"
+	team.Status.Teammates[2].Phase = "Completed"
+	team.Status.Teammates[3].Phase = "Running"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Running", team.Status.Pipeline.Stages[1].Phase)
+	assert.Equal(t, "2/3", team.Status.Pipeline.Stages[1].TeammatesReady)
+
+	// 5) All analysts done → analysis Completed, synthesis Waiting (no teammate yet).
+	team.Status.Teammates[3].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[1].Phase)
+	assert.Equal(t, 2, team.Status.Pipeline.StagesCompleted)
+
+	// 6) report-writer completed → synthesis Completed; distribution gated on approval.
+	team.Status.Teammates[4].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[2].Phase)
+	assert.Equal(t, "PendingApproval", team.Status.Pipeline.Stages[3].Phase,
+		"distribution requires approval; no annotation → PendingApproval")
+	assert.Equal(t, 3, team.Status.Pipeline.StagesCompleted)
+	assert.Equal(t, "distribution", team.Status.Pipeline.CurrentStage)
+
+	// 7) Grant approval → distribution Waiting (still no teammate spawned).
+	team.Annotations = map[string]string{"approved.kagents.dev/stage-distribution": "true"}
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[3].Phase)
+
+	// 8) email-drafter completes → distribution Completed, pipeline done.
+	team.Status.Teammates[5].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[3].Phase)
+	assert.Equal(t, 4, team.Status.Pipeline.StagesCompleted)
+	assert.Empty(t, team.Status.Pipeline.CurrentStage, "all stages Completed → CurrentStage empty")
+}
+
+func TestUpdatePipelineStatus_FailedStage(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := pipelineTeam("status-failed")
+	team.Status.Teammates = []claudev1alpha1.TeammateStatus{
+		{Name: "data-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Failed"}},
+		{Name: "market-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "financial-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "competitive-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "report-writer", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "email-drafter", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+	}
+	r.updatePipelineStatus(team, time.Now())
+	assert.Equal(t, "Failed", team.Status.Pipeline.Stages[0].Phase)
+}
+
+func TestUpdatePipelineStatus_NoPipelineClearsField(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := minimalTeam("no-pipeline")
+	// Pre-populate a stale status to confirm it's cleared.
+	team.Status.Pipeline = &claudev1alpha1.PipelineStatus{StagesTotal: 1}
+	r.updatePipelineStatus(team, time.Now())
+	assert.Nil(t, team.Status.Pipeline, "no spec.pipeline → status.pipeline cleared")
 }
 
 // TestBuildAgentPod_OutputRouting_SkipsUnresolvedInput tolerates a misconfigured

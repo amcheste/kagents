@@ -116,6 +116,7 @@ _Appears in:_
 | `lifecycle` _[LifecycleSpec](#lifecyclespec)_ | Lifecycle configures team runtime behavior and budget. |  | Optional: \{\} <br /> |
 | `qualityGates` _[QualityGateSpec](#qualitygatespec)_ | QualityGates configures validation before marking team complete. |  | Optional: \{\} <br /> |
 | `observability` _[ObservabilitySpec](#observabilityspec)_ | Observability configures metrics and notifications. |  | Optional: \{\} <br /> |
+| `pipeline` _[PipelineSpec](#pipelinespec)_ | Pipeline declares an ordered set of stages with explicit fan-out/merge<br />semantics. When set, the operator derives each teammate's effective<br />dependencies from the stage graph instead of the per-teammate DependsOn<br />field, which becomes mutually exclusive (enforced by CEL validation<br />on this spec). Inputs[].From still contributes regardless. |  | Optional: \{\} <br /> |
 | `harness` _string_ | Harness selects the agent runtime that powers this team's pods.<br />Today the only supported value is "claude-code" (Anthropic's native<br />Claude Code Agent Teams protocol), which is also the default when<br />omitted. The field exists so the operator's API stays neutral to a<br />single agent runtime; future harnesses for other team-based agent<br />systems can plug in behind the same CRD without an API break. | claude-code | Enum: [claude-code] <br />Optional: \{\} <br /> |
 
 
@@ -145,6 +146,7 @@ _Appears in:_
 | `pullRequest` _[PullRequestStatus](#pullrequeststatus)_ | PullRequest reports PR creation status. |  | Optional: \{\} <br /> |
 | `consolidatedBranch` _string_ | ConsolidatedBranch is the branch name pushed by OnComplete=push-branch.<br />Populated once the push-branch Job succeeds; OnComplete=create-pr reads<br />this as the PR head branch when set, in place of Spec.Repository.Branch. |  | Optional: \{\} <br /> |
 | `artifacts` _[ArtifactStatus](#artifactstatus) array_ | Artifacts records the files produced by teammates that declared<br />Outputs in their spec. Populated as each producer teammate reaches<br />Completed; the operator does not retroactively scan teammate pods<br />for undeclared files. |  | Optional: \{\} <br /> |
+| `pipeline` _[PipelineStatus](#pipelinestatus)_ | Pipeline reports stage-level progress when spec.pipeline is set.<br />Recomputed every reconcile from teammate pod phases; cleared if<br />spec.pipeline is removed. |  | Optional: \{\} <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations. |  | Optional: \{\} <br /> |
 
 
@@ -446,6 +448,43 @@ _Appears in:_
 | `description` _string_ | Description is an optional human-readable summary of the artifact. |  | Optional: \{\} <br /> |
 
 
+#### PipelineSpec
+
+
+
+PipelineSpec models a multi-stage workflow with explicit fan-out/merge
+as an alternative to flat per-teammate DependsOn. Each teammate is
+listed in exactly one stage; the stage graph determines spawn ordering.
+
+
+
+_Appears in:_
+- [AgentTeamSpec](#agentteamspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `stages` _[StageSpec](#stagespec) array_ | Stages is the ordered list of stages. Ordering is for readability;<br />runtime ordering follows the StageSpec.DependsOn graph. |  | MinItems: 1 <br /> |
+
+
+#### PipelineStatus
+
+
+
+PipelineStatus reports stage-level progress for a pipelined team.
+
+
+
+_Appears in:_
+- [AgentTeamStatus](#agentteamstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `currentStage` _string_ | CurrentStage names the lowest-indexed stage that has not yet<br />reached Completed. Empty when every stage is Completed. |  | Optional: \{\} <br /> |
+| `stagesCompleted` _integer_ | StagesCompleted is the count of stages whose teammates have all<br />reached Succeeded. |  |  |
+| `stagesTotal` _integer_ | StagesTotal is the total number of stages declared on the spec. |  |  |
+| `stages` _[StageStatus](#stagestatus) array_ | Stages reports per-stage detail. |  | Optional: \{\} <br /> |
+
+
 #### PullRequestSpec
 
 
@@ -571,6 +610,46 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `name` _string_ | Name is the skill directory name under .claude/skills/. |  |  |
 | `source` _[SkillSource](#skillsource)_ | Source identifies where to load the skill from. |  |  |
+
+
+#### StageSpec
+
+
+
+StageSpec defines one stage of a pipeline.
+
+
+
+_Appears in:_
+- [PipelineSpec](#pipelinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the unique identifier for this stage within the pipeline. |  | Pattern: `^[a-z0-9]([a-z0-9-]*[a-z0-9])?$` <br /> |
+| `teammates` _string array_ | Teammates names the teammates that participate in this stage. Names<br />must match spec.teammates[].name. A teammate may not appear in more<br />than one stage. |  | MinItems: 1 <br /> |
+| `dependsOn` _string array_ | DependsOn names earlier stages this one waits on. Every teammate in<br />every listed stage must reach Succeeded before any teammate in this<br />stage is spawned. |  | Optional: \{\} <br /> |
+| `fan` _string_ | Fan documents the stage's relationship to its dependencies and is<br />informational in v0.8.0 — both values currently behave identically.<br />"parallel" (default) signals a normal fan-out stage; "merge" signals<br />a synthesis stage that consumes outputs from multiple upstream<br />branches. Distinct runtime semantics are reserved for a future<br />version. | parallel | Enum: [parallel merge] <br />Optional: \{\} <br /> |
+| `approvalRequired` _boolean_ | ApprovalRequired gates the entire stage on a human approval<br />annotation `approved.kagents.dev/stage-\{name\}=true` on the<br />AgentTeam. No teammate in this stage spawns until the annotation<br />is present. |  | Optional: \{\} <br /> |
+
+
+#### StageStatus
+
+
+
+StageStatus reports a single stage's runtime state.
+
+
+
+_Appears in:_
+- [PipelineStatus](#pipelinestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name matches the StageSpec.Name. |  |  |
+| `phase` _string_ | Phase is one of Waiting, PendingApproval, Running, Completed, Failed. |  | Enum: [Waiting PendingApproval Running Completed Failed] <br />Optional: \{\} <br /> |
+| `startedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | StartedAt is when the first teammate in this stage was spawned. |  | Optional: \{\} <br /> |
+| `completedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta)_ | CompletedAt is when the last teammate in this stage reached Succeeded. |  | Optional: \{\} <br /> |
+| `teammatesReady` _string_ | TeammatesReady reports completed-vs-total teammates for this stage<br />in the form "N/M" (e.g. "2/3"). |  | Optional: \{\} <br /> |
 
 
 #### TaskSummary

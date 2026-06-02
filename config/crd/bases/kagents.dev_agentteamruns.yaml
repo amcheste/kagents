@@ -541,6 +541,67 @@ spec:
                 - TimedOut
                 - BudgetExceeded
                 type: string
+              pipeline:
+                description: |-
+                  Pipeline reports stage-level progress when spec.pipeline is set.
+                  Recomputed every reconcile from teammate pod phases; cleared if
+                  spec.pipeline is removed.
+                properties:
+                  currentStage:
+                    description: |-
+                      CurrentStage names the lowest-indexed stage that has not yet
+                      reached Completed. Empty when every stage is Completed.
+                    type: string
+                  stages:
+                    description: Stages reports per-stage detail.
+                    items:
+                      description: StageStatus reports a single stage's runtime state.
+                      properties:
+                        completedAt:
+                          description: CompletedAt is when the last teammate in this
+                            stage reached Succeeded.
+                          format: date-time
+                          type: string
+                        name:
+                          description: Name matches the StageSpec.Name.
+                          type: string
+                        phase:
+                          description: Phase is one of Waiting, PendingApproval, Running,
+                            Completed, Failed.
+                          enum:
+                          - Waiting
+                          - PendingApproval
+                          - Running
+                          - Completed
+                          - Failed
+                          type: string
+                        startedAt:
+                          description: StartedAt is when the first teammate in this
+                            stage was spawned.
+                          format: date-time
+                          type: string
+                        teammatesReady:
+                          description: |-
+                            TeammatesReady reports completed-vs-total teammates for this stage
+                            in the form "N/M" (e.g. "2/3").
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  stagesCompleted:
+                    description: |-
+                      StagesCompleted is the count of stages whose teammates have all
+                      reached Succeeded.
+                    type: integer
+                  stagesTotal:
+                    description: StagesTotal is the total number of stages declared
+                      on the spec.
+                    type: integer
+                required:
+                - stagesCompleted
+                - stagesTotal
+                type: object
               pullRequest:
                 description: PullRequest reports PR creation status.
                 properties:

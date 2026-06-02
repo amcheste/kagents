@@ -9,6 +9,7 @@ import (
 )
 
 // AgentTeamSpec defines the desired state of an AgentTeam.
+// +kubebuilder:validation:XValidation:rule="!(has(self.pipeline) && self.teammates.exists(t, has(t.dependsOn) && size(t.dependsOn) > 0))",message="spec.pipeline and spec.teammates[].dependsOn are mutually exclusive — pipeline derives teammate ordering from the stage graph"
 type AgentTeamSpec struct {
 	// Repository configuration for the codebase agents will work on.
 	// Use this for coding tasks. Optional when Workspace is set.
@@ -46,6 +47,14 @@ type AgentTeamSpec struct {
 	// Observability configures metrics and notifications.
 	// +optional
 	Observability *ObservabilitySpec `json:"observability,omitempty"`
+
+	// Pipeline declares an ordered set of stages with explicit fan-out/merge
+	// semantics. When set, the operator derives each teammate's effective
+	// dependencies from the stage graph instead of the per-teammate DependsOn
+	// field, which becomes mutually exclusive (enforced by CEL validation
+	// on this spec). Inputs[].From still contributes regardless.
+	// +optional
+	Pipeline *PipelineSpec `json:"pipeline,omitempty"`
 
 	// Harness selects the agent runtime that powers this team's pods.
 	// Today the only supported value is "claude-code" (Anthropic's native
@@ -265,6 +274,53 @@ type TeammateSpec struct {
 	// Resources defines compute resources for this teammate's pod.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+// PipelineSpec models a multi-stage workflow with explicit fan-out/merge
+// as an alternative to flat per-teammate DependsOn. Each teammate is
+// listed in exactly one stage; the stage graph determines spawn ordering.
+type PipelineSpec struct {
+	// Stages is the ordered list of stages. Ordering is for readability;
+	// runtime ordering follows the StageSpec.DependsOn graph.
+	// +kubebuilder:validation:MinItems=1
+	Stages []StageSpec `json:"stages"`
+}
+
+// StageSpec defines one stage of a pipeline.
+type StageSpec struct {
+	// Name is the unique identifier for this stage within the pipeline.
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// Teammates names the teammates that participate in this stage. Names
+	// must match spec.teammates[].name. A teammate may not appear in more
+	// than one stage.
+	// +kubebuilder:validation:MinItems=1
+	Teammates []string `json:"teammates"`
+
+	// DependsOn names earlier stages this one waits on. Every teammate in
+	// every listed stage must reach Succeeded before any teammate in this
+	// stage is spawned.
+	// +optional
+	DependsOn []string `json:"dependsOn,omitempty"`
+
+	// Fan documents the stage's relationship to its dependencies and is
+	// informational in v0.8.0 — both values currently behave identically.
+	// "parallel" (default) signals a normal fan-out stage; "merge" signals
+	// a synthesis stage that consumes outputs from multiple upstream
+	// branches. Distinct runtime semantics are reserved for a future
+	// version.
+	// +kubebuilder:validation:Enum=parallel;merge
+	// +kubebuilder:default="parallel"
+	// +optional
+	Fan string `json:"fan,omitempty"`
+
+	// ApprovalRequired gates the entire stage on a human approval
+	// annotation `approved.kagents.dev/stage-{name}=true` on the
+	// AgentTeam. No teammate in this stage spawns until the annotation
+	// is present.
+	// +optional
+	ApprovalRequired bool `json:"approvalRequired,omitempty"`
 }
 
 // OutputSpec declares a file an agent produces. Downstream teammates
@@ -532,6 +588,12 @@ type AgentTeamStatus struct {
 	// +optional
 	Artifacts []ArtifactStatus `json:"artifacts,omitempty"`
 
+	// Pipeline reports stage-level progress when spec.pipeline is set.
+	// Recomputed every reconcile from teammate pod phases; cleared if
+	// spec.pipeline is removed.
+	// +optional
+	Pipeline *PipelineStatus `json:"pipeline,omitempty"`
+
 	// Conditions represent the latest available observations.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -569,6 +631,49 @@ type TeammateStatus struct {
 	// teammate's RestartCount reaches Spec.Lifecycle.MaxRestarts.
 	// +optional
 	RestartCount int32 `json:"restartCount,omitempty"`
+}
+
+// PipelineStatus reports stage-level progress for a pipelined team.
+type PipelineStatus struct {
+	// CurrentStage names the lowest-indexed stage that has not yet
+	// reached Completed. Empty when every stage is Completed.
+	// +optional
+	CurrentStage string `json:"currentStage,omitempty"`
+
+	// StagesCompleted is the count of stages whose teammates have all
+	// reached Succeeded.
+	StagesCompleted int `json:"stagesCompleted"`
+
+	// StagesTotal is the total number of stages declared on the spec.
+	StagesTotal int `json:"stagesTotal"`
+
+	// Stages reports per-stage detail.
+	// +optional
+	Stages []StageStatus `json:"stages,omitempty"`
+}
+
+// StageStatus reports a single stage's runtime state.
+type StageStatus struct {
+	// Name matches the StageSpec.Name.
+	Name string `json:"name"`
+
+	// Phase is one of Waiting, PendingApproval, Running, Completed, Failed.
+	// +kubebuilder:validation:Enum=Waiting;PendingApproval;Running;Completed;Failed
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// StartedAt is when the first teammate in this stage was spawned.
+	// +optional
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+
+	// CompletedAt is when the last teammate in this stage reached Succeeded.
+	// +optional
+	CompletedAt *metav1.Time `json:"completedAt,omitempty"`
+
+	// TeammatesReady reports completed-vs-total teammates for this stage
+	// in the form "N/M" (e.g. "2/3").
+	// +optional
+	TeammatesReady string `json:"teammatesReady,omitempty"`
 }
 
 // ArtifactStatus records a single artifact produced by a teammate that

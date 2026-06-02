@@ -272,8 +272,14 @@ func (r *AgentTeamReconciler) reconcileInitializing(ctx context.Context, team *c
 
 	// Deploy teammates whose dependencies are already met (or have none).
 	// Inputs[].From implicitly extends DependsOn so consumers wait for producers.
+	// Pipeline mode additionally gates the entire stage on
+	// approved.kagents.dev/stage-{name} when ApprovalRequired is set.
 	for _, tm := range team.Spec.Teammates {
-		if !r.dependenciesMet(ctx, team, effectiveDependencies(tm)) {
+		if !r.dependenciesMet(ctx, team, effectiveDependencies(team, tm)) {
+			continue
+		}
+		if stage, ok := stageForTeammate(team, tm.Name); ok && !stageApprovalGranted(team, stage) {
+			r.setTeammatePendingApproval(team, tm.Name, "stage-"+stage.Name)
 			continue
 		}
 		if !r.checkApprovalGate(ctx, team, "spawn-"+tm.Name) {
@@ -333,6 +339,8 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 
 	// Sync pod statuses into team.Status.
 	r.syncPodStatuses(ctx, team)
+	// Recompute pipeline status once teammate phases are fresh.
+	r.updatePipelineStatus(team, time.Now())
 
 	// Re-spawn crashed teammates whose RestartCount is still below the limit;
 	// fail the team if any teammate has exhausted its restarts.
@@ -358,7 +366,11 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 			return ctrl.Result{}, err
 		}
 
-		if !r.dependenciesMet(ctx, team, effectiveDependencies(tm)) {
+		if !r.dependenciesMet(ctx, team, effectiveDependencies(team, tm)) {
+			continue
+		}
+		if stage, ok := stageForTeammate(team, tm.Name); ok && !stageApprovalGranted(team, stage) {
+			r.setTeammatePendingApproval(team, tm.Name, "stage-"+stage.Name)
 			continue
 		}
 		if !r.checkApprovalGate(ctx, team, "spawn-"+tm.Name) {
@@ -1871,33 +1883,213 @@ func (r *AgentTeamReconciler) dependenciesMet(ctx context.Context, team *claudev
 }
 
 // effectiveDependencies returns the set of teammate names this teammate must
-// wait for before spawning: the explicit DependsOn list, plus the implicit
-// set derived from each Inputs[].From. Duplicates and empty names are
-// dropped so the result is safe to pass to dependenciesMet.
-func effectiveDependencies(tm claudev1alpha1.TeammateSpec) []string {
-	seen := make(map[string]struct{}, len(tm.DependsOn)+len(tm.Inputs))
-	out := make([]string, 0, len(tm.DependsOn)+len(tm.Inputs))
-	for _, d := range tm.DependsOn {
-		if d == "" {
-			continue
+// wait for before spawning. Sources, in order:
+//
+//   - When team.Spec.Pipeline is set, every teammate in every upstream
+//     stage of this teammate's stage (the pipeline graph drives ordering;
+//     per-teammate DependsOn is mutually exclusive and CEL-rejected).
+//   - Otherwise, the explicit DependsOn list on TeammateSpec.
+//   - In both cases, every Inputs[].From — data-flow dependencies always
+//     contribute regardless of the ordering mode.
+//
+// Duplicates and empty names are dropped so the result is safe to pass to
+// dependenciesMet. The team argument may be nil for unit tests that only
+// exercise the DependsOn + Inputs paths.
+func effectiveDependencies(team *claudev1alpha1.AgentTeam, tm claudev1alpha1.TeammateSpec) []string {
+	seen := make(map[string]struct{})
+	out := make([]string, 0)
+	add := func(name string) {
+		if name == "" {
+			return
 		}
-		if _, ok := seen[d]; ok {
-			continue
+		if _, dup := seen[name]; dup {
+			return
 		}
-		seen[d] = struct{}{}
-		out = append(out, d)
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+
+	if team != nil && team.Spec.Pipeline != nil {
+		for _, dep := range pipelineDependencies(team, tm.Name) {
+			add(dep)
+		}
+	} else {
+		for _, d := range tm.DependsOn {
+			add(d)
+		}
 	}
 	for _, in := range tm.Inputs {
-		if in.From == "" {
-			continue
-		}
-		if _, ok := seen[in.From]; ok {
-			continue
-		}
-		seen[in.From] = struct{}{}
-		out = append(out, in.From)
+		add(in.From)
 	}
 	return out
+}
+
+// stageForTeammate locates the StageSpec that contains the named teammate
+// within team.Spec.Pipeline. Returns (zero, false) when no pipeline is set
+// or the teammate is not assigned to any stage — a misconfiguration in the
+// latter case that the reconciler treats as "no pipeline-derived deps" so
+// the teammate still has a chance to spawn via Inputs/DependsOn.
+func stageForTeammate(team *claudev1alpha1.AgentTeam, tmName string) (claudev1alpha1.StageSpec, bool) {
+	if team == nil || team.Spec.Pipeline == nil {
+		return claudev1alpha1.StageSpec{}, false
+	}
+	for _, st := range team.Spec.Pipeline.Stages {
+		for _, t := range st.Teammates {
+			if t == tmName {
+				return st, true
+			}
+		}
+	}
+	return claudev1alpha1.StageSpec{}, false
+}
+
+// pipelineDependencies returns the names of teammates that must complete
+// before the named teammate can spawn, derived from the pipeline graph:
+// every teammate in every stage listed in this teammate's stage's DependsOn.
+// Returns nil when no pipeline is set or the teammate isn't in any stage.
+func pipelineDependencies(team *claudev1alpha1.AgentTeam, tmName string) []string {
+	stage, ok := stageForTeammate(team, tmName)
+	if !ok {
+		return nil
+	}
+	if len(stage.DependsOn) == 0 {
+		return nil
+	}
+	// Index stages by name for fast lookup.
+	byName := make(map[string]claudev1alpha1.StageSpec, len(team.Spec.Pipeline.Stages))
+	for _, st := range team.Spec.Pipeline.Stages {
+		byName[st.Name] = st
+	}
+	var deps []string
+	for _, depStage := range stage.DependsOn {
+		st, ok := byName[depStage]
+		if !ok {
+			continue
+		}
+		deps = append(deps, st.Teammates...)
+	}
+	return deps
+}
+
+// stageApprovalGranted reports whether the stage's approval gate is
+// satisfied. A stage without ApprovalRequired is always granted; one
+// with ApprovalRequired needs the annotation
+// `approved.kagents.dev/stage-{name}=true` on the team.
+func stageApprovalGranted(team *claudev1alpha1.AgentTeam, stage claudev1alpha1.StageSpec) bool {
+	if !stage.ApprovalRequired {
+		return true
+	}
+	return team.Annotations["approved.kagents.dev/stage-"+stage.Name] == "true"
+}
+
+// updatePipelineStatus refreshes team.Status.Pipeline from current teammate
+// pod phases when spec.pipeline is set, or clears the field when not.
+// Must be called after syncPodStatuses so team.Status.Teammates is current.
+//
+// Per-stage Phase is computed from teammate phases plus the upstream-stage
+// completion graph:
+//
+//   - any teammate Failed                                       → "Failed"
+//   - every teammate Completed                                  → "Completed"
+//   - any upstream stage not yet Completed                      → "Waiting"
+//   - this stage gated on ApprovalRequired + no annotation yet  → "PendingApproval"
+//   - any teammate already spawned (Running/Pending/Completed)  → "Running"
+//   - otherwise (gates clear, no teammate yet spawned)          → "Waiting"
+//
+// StartedAt/CompletedAt are preserved across reconciles once set so a
+// stage's transition timeline survives status rebuilds.
+func (r *AgentTeamReconciler) updatePipelineStatus(team *claudev1alpha1.AgentTeam, now time.Time) {
+	if team.Spec.Pipeline == nil || len(team.Spec.Pipeline.Stages) == 0 {
+		team.Status.Pipeline = nil
+		return
+	}
+
+	// Index teammate phases by name.
+	phase := make(map[string]string, len(team.Status.Teammates))
+	for _, st := range team.Status.Teammates {
+		phase[st.Name] = st.Phase
+	}
+
+	// Preserve existing timestamps across reconciles.
+	prev := map[string]claudev1alpha1.StageStatus{}
+	if team.Status.Pipeline != nil {
+		for _, ss := range team.Status.Pipeline.Stages {
+			prev[ss.Name] = ss
+		}
+	}
+
+	stages := make([]claudev1alpha1.StageStatus, 0, len(team.Spec.Pipeline.Stages))
+	stageCompleted := make(map[string]bool, len(team.Spec.Pipeline.Stages))
+	completed := 0
+	currentStage := ""
+
+	for _, s := range team.Spec.Pipeline.Stages {
+		ss := prev[s.Name]
+		ss.Name = s.Name
+
+		ready := 0
+		anyFailed := false
+		anySpawned := false
+		for _, tmName := range s.Teammates {
+			switch phase[tmName] {
+			case "Completed":
+				ready++
+				anySpawned = true
+			case "Failed":
+				anyFailed = true
+				anySpawned = true
+			case "Running", "Pending":
+				anySpawned = true
+			}
+		}
+		ss.TeammatesReady = fmt.Sprintf("%d/%d", ready, len(s.Teammates))
+
+		upstreamReady := true
+		for _, dep := range s.DependsOn {
+			if !stageCompleted[dep] {
+				upstreamReady = false
+				break
+			}
+		}
+
+		switch {
+		case anyFailed:
+			ss.Phase = "Failed"
+		case ready == len(s.Teammates) && len(s.Teammates) > 0:
+			ss.Phase = "Completed"
+			stageCompleted[s.Name] = true
+			if ss.CompletedAt == nil {
+				t := metav1.NewTime(now)
+				ss.CompletedAt = &t
+			}
+		case !upstreamReady:
+			ss.Phase = "Waiting"
+		case s.ApprovalRequired && !stageApprovalGranted(team, s):
+			ss.Phase = "PendingApproval"
+		case anySpawned:
+			ss.Phase = "Running"
+			if ss.StartedAt == nil {
+				t := metav1.NewTime(now)
+				ss.StartedAt = &t
+			}
+		default:
+			ss.Phase = "Waiting"
+		}
+
+		if ss.Phase == "Completed" {
+			completed++
+		} else if currentStage == "" {
+			currentStage = s.Name
+		}
+		stages = append(stages, ss)
+	}
+
+	team.Status.Pipeline = &claudev1alpha1.PipelineStatus{
+		CurrentStage:    currentStage,
+		StagesCompleted: completed,
+		StagesTotal:     len(team.Spec.Pipeline.Stages),
+		Stages:          stages,
+	}
 }
 
 // findProducerOutputPath looks up the absolute path the producer teammate

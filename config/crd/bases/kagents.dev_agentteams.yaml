@@ -414,6 +414,72 @@ spec:
                     - url
                     type: object
                 type: object
+              pipeline:
+                description: |-
+                  Pipeline declares an ordered set of stages with explicit fan-out/merge
+                  semantics. When set, the operator derives each teammate's effective
+                  dependencies from the stage graph instead of the per-teammate DependsOn
+                  field, which becomes mutually exclusive (enforced by CEL validation
+                  on this spec). Inputs[].From still contributes regardless.
+                properties:
+                  stages:
+                    description: |-
+                      Stages is the ordered list of stages. Ordering is for readability;
+                      runtime ordering follows the StageSpec.DependsOn graph.
+                    items:
+                      description: StageSpec defines one stage of a pipeline.
+                      properties:
+                        approvalRequired:
+                          description: |-
+                            ApprovalRequired gates the entire stage on a human approval
+                            annotation `approved.kagents.dev/stage-{name}=true` on the
+                            AgentTeam. No teammate in this stage spawns until the annotation
+                            is present.
+                          type: boolean
+                        dependsOn:
+                          description: |-
+                            DependsOn names earlier stages this one waits on. Every teammate in
+                            every listed stage must reach Succeeded before any teammate in this
+                            stage is spawned.
+                          items:
+                            type: string
+                          type: array
+                        fan:
+                          default: parallel
+                          description: |-
+                            Fan documents the stage's relationship to its dependencies and is
+                            informational in v0.8.0 — both values currently behave identically.
+                            "parallel" (default) signals a normal fan-out stage; "merge" signals
+                            a synthesis stage that consumes outputs from multiple upstream
+                            branches. Distinct runtime semantics are reserved for a future
+                            version.
+                          enum:
+                          - parallel
+                          - merge
+                          type: string
+                        name:
+                          description: Name is the unique identifier for this stage
+                            within the pipeline.
+                          pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+                          type: string
+                        teammates:
+                          description: |-
+                            Teammates names the teammates that participate in this stage. Names
+                            must match spec.teammates[].name. A teammate may not appear in more
+                            than one stage.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                      required:
+                      - name
+                      - teammates
+                      type: object
+                    minItems: 1
+                    type: array
+                required:
+                - stages
+                type: object
               qualityGates:
                 description: QualityGates configures validation before marking team
                   complete.
@@ -741,6 +807,11 @@ spec:
             - lead
             - teammates
             type: object
+            x-kubernetes-validations:
+            - message: spec.pipeline and spec.teammates[].dependsOn are mutually exclusive
+                — pipeline derives teammate ordering from the stage graph
+              rule: '!(has(self.pipeline) && self.teammates.exists(t, has(t.dependsOn)
+                && size(t.dependsOn) > 0))'
           status:
             description: AgentTeamStatus defines the observed state of an AgentTeam.
             properties:
@@ -880,6 +951,67 @@ spec:
                 - TimedOut
                 - BudgetExceeded
                 type: string
+              pipeline:
+                description: |-
+                  Pipeline reports stage-level progress when spec.pipeline is set.
+                  Recomputed every reconcile from teammate pod phases; cleared if
+                  spec.pipeline is removed.
+                properties:
+                  currentStage:
+                    description: |-
+                      CurrentStage names the lowest-indexed stage that has not yet
+                      reached Completed. Empty when every stage is Completed.
+                    type: string
+                  stages:
+                    description: Stages reports per-stage detail.
+                    items:
+                      description: StageStatus reports a single stage's runtime state.
+                      properties:
+                        completedAt:
+                          description: CompletedAt is when the last teammate in this
+                            stage reached Succeeded.
+                          format: date-time
+                          type: string
+                        name:
+                          description: Name matches the StageSpec.Name.
+                          type: string
+                        phase:
+                          description: Phase is one of Waiting, PendingApproval, Running,
+                            Completed, Failed.
+                          enum:
+                          - Waiting
+                          - PendingApproval
+                          - Running
+                          - Completed
+                          - Failed
+                          type: string
+                        startedAt:
+                          description: StartedAt is when the first teammate in this
+                            stage was spawned.
+                          format: date-time
+                          type: string
+                        teammatesReady:
+                          description: |-
+                            TeammatesReady reports completed-vs-total teammates for this stage
+                            in the form "N/M" (e.g. "2/3").
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  stagesCompleted:
+                    description: |-
+                      StagesCompleted is the count of stages whose teammates have all
+                      reached Succeeded.
+                    type: integer
+                  stagesTotal:
+                    description: StagesTotal is the total number of stages declared
+                      on the spec.
+                    type: integer
+                required:
+                - stagesCompleted
+                - stagesTotal
+                type: object
               pullRequest:
                 description: PullRequest reports PR creation status.
                 properties:
