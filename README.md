@@ -4,7 +4,7 @@
 
 # kagents
 
-**Run Claude Code Agent Teams as a Kubernetes operator.**
+**Kubernetes-native AI knowledge work orchestration.**
 
 [![Validate](https://github.com/amcheste/kagents/actions/workflows/validate.yml/badge.svg)](https://github.com/amcheste/kagents/actions/workflows/validate.yml)
 [![Version](https://img.shields.io/github/v/tag/amcheste/kagents?label=version&sort=semver&color=0B0B0C)](https://github.com/amcheste/kagents/releases)
@@ -15,33 +15,36 @@
 
 ---
 
-> **kagents** is the project brand. The implementation lives in the [`kagents`](https://github.com/amcheste/kagents) repository and ships under the `kagents.dev/v1alpha1` API group. Documentation site: [kagents.dev](https://kagents.dev) (under construction. See [v0.7.0 milestone](https://github.com/amcheste/kagents/milestone/8)).
+> **kagents** is the project brand. The implementation lives in the [`kagents`](https://github.com/amcheste/kagents) repository and ships under the `kagents.dev/v1alpha1` API group. Documentation site: [kagents.dev](https://kagents.dev) (under construction).
 
-Claude Code [Agent Teams](https://docs.anthropic.com/en/docs/claude-code/agent-teams) let multiple Claude Code instances collaborate. A lead coordinates work via a shared task list while teammates communicate through peer-to-peer mailboxes. Natively this runs on a single machine using tmux. This operator lifts that pattern into Kubernetes so you can run large-scale agent teams on your cluster.
+kagents is a Kubernetes operator for orchestrating teams of AI agents that produce **knowledge work** — research, analysis, reporting, document drafts, operational runbooks — declaratively, on your cluster, with budget caps, RBAC, observability, and human-in-the-loop approval gates built in. Teams are `AgentTeam` resources; the operator runs them, tracks their cost, and (in v0.8.0+) delivers the artifacts they produce to wherever humans actually consume them. **Coding is also supported** as a mode — and was the first use case kagents was built for — but it's now one mode among several rather than the headline.
+
+Under the hood, kagents wraps Anthropic's native [Claude Code Agent Teams](https://docs.anthropic.com/en/docs/claude-code/agent-teams) protocol exactly — file-based mailboxes + a shared task list on a `ReadWriteMany` volume, no protocol translation. A `spec.harness` field (default `claude-code`) exists so a future team-based agent runtime can plug in behind the same operator API; today, Claude Code is the only supported harness. See [`docs/product-vision.md`](docs/product-vision.md) for where this is going.
 
 ## Modes
 
-The operator supports two distinct use cases controlled by a single field in the `AgentTeam` spec:
+The operator supports two distinct use cases controlled by a single field on the `AgentTeam` spec:
 
 | Mode | Use when | Key field |
 |------|----------|-----------|
+| **Cowork** | Agents produce knowledge artifacts — reports, documents, analysis, drafts, emails | `spec.workspace` |
 | **Coding** | Agents work on a git repository | `spec.repository` |
-| **Cowork** | Agents produce documents, reports, emails, analysis | `spec.workspace` |
 
-Both modes share the same coordination protocol (shared PVCs, mailboxes, task lists) and all Cowork extensions (Skills, MCP servers, approval gates).
+Both modes share the same coordination protocol (shared PVCs, mailboxes, task lists) and all the cross-mode capabilities (skills, MCP servers, approval gates, budget/timeout, templates).
 
 ## Features
 
-- **Native Agent Teams protocol**. Preserves Anthropic's file-based mailbox and task list format over ReadWriteMany PVCs; no protocol translation
-- **Per-teammate git worktrees**. Each coding agent works on an isolated branch to prevent merge conflicts
-- **Cowork mode**. Mount ConfigMap/PVC inputs and collect outputs without requiring a git repo
-- **Skills as CRD fields**. Mount Claude Code skills from ConfigMaps into each agent's `.claude/skills/`
-- **MCP servers per agent**. Configure Model Context Protocol connections per teammate
-- **Approval gates**. Pause spawning specific teammates until a human applies an annotation
-- **Budget enforcement**. Terminate the team if estimated API cost exceeds a configured limit
-- **Timeout enforcement**. Terminate the team after a configurable wall-clock duration
-- **`dependsOn` ordering**. Spawn teammates only after their declared dependencies complete
-- **Reusable templates**. Define team patterns with `AgentTeamTemplate`, instantiate with `AgentTeamRun`
+- **Cowork mode.** Run knowledge-work teams that produce documents, reports, and emails. Mount inputs from ConfigMaps/PVCs; collect outputs.
+- **Native Agent Teams protocol.** Wraps Anthropic's file-based mailbox + task list format on ReadWriteMany PVCs; no protocol translation.
+- **Harness-agnostic CRD.** `spec.harness` (default `claude-code`) so a future team-based agent runtime can plug in behind the same operator API.
+- **Skills as CRD fields.** Mount Claude Code skills from ConfigMaps into each agent's `~/.claude/skills/`.
+- **MCP servers per agent.** Configure Model Context Protocol connections per teammate.
+- **Approval gates.** Pause spawning specific teammates until a human applies an annotation.
+- **Budget enforcement.** Terminate the team if estimated API cost exceeds a configured limit.
+- **Timeout enforcement.** Terminate the team after a configurable wall-clock duration.
+- **`dependsOn` ordering.** Spawn teammates only after their declared dependencies complete.
+- **Reusable templates.** Define team patterns with `AgentTeamTemplate`, instantiate with `AgentTeamRun`.
+- **Per-teammate git worktrees** *(coding mode)*. Each coding agent works on an isolated branch to prevent merge conflicts.
 
 ## Quick Start
 
@@ -58,21 +61,21 @@ Both modes share the same coordination protocol (shared PVCs, mailboxes, task li
 # 1. Install the operator (CRDs + controller + RBAC)
 helm install kagents \
   oci://ghcr.io/amcheste/charts/kagents \
-  --namespace claude-teams-system --create-namespace
+  --namespace kagents-system --create-namespace
 
 # 2. Create an API key secret in the namespace where your teams will run
-kubectl create namespace dev-agents
+kubectl create namespace cowork-agents
 kubectl create secret generic anthropic-api-key \
-  --namespace dev-agents \
+  --namespace cowork-agents \
   --from-literal=ANTHROPIC_API_KEY=sk-ant-...
 
 # 3. Apply a sample team
-kubectl apply -n dev-agents -f \
+kubectl apply -n cowork-agents -f \
   https://raw.githubusercontent.com/amcheste/kagents/main/config/samples/auth-refactor-team.yaml
 
 # 4. Watch the team progress
-kubectl get agentteams -n dev-agents -w
-kubectl describe agentteam auth-refactor -n dev-agents
+kubectl get agentteams -n cowork-agents -w
+kubectl describe agentteam auth-refactor -n cowork-agents
 ```
 
 ### Local development with Kind
@@ -91,7 +94,7 @@ make install deploy
 
 # 4. Create your API key secret
 kubectl create secret generic anthropic-api-key \
-  --namespace dev-agents \
+  --namespace cowork-agents \
   --from-literal=ANTHROPIC_API_KEY=sk-ant-...
 
 # 5. Apply a sample team
@@ -100,52 +103,9 @@ kubectl apply -f config/samples/auth-refactor-team.yaml
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev loop (testing, linting, manifest regeneration).
 
-## Example: Coding Team
-
-```yaml
-apiVersion: kagents.dev/v1alpha1
-kind: AgentTeam
-metadata:
-  name: auth-refactor
-  namespace: dev-agents
-spec:
-  repository:
-    url: "git@github.com:acme/backend.git"
-    branch: "main"
-    credentialsSecret: "git-credentials"
-
-  auth:
-    apiKeySecret: "anthropic-api-key"
-
-  lead:
-    model: "opus"
-    prompt: |
-      Coordinate the migration from JWT to OAuth2.
-      Assign backend-api, frontend-auth, and test-coverage to their tracks.
-      Validate integration when all tracks complete.
-
-  teammates:
-    - name: "backend-api"
-      model: "sonnet"
-      prompt: "Implement OAuth2 endpoints. Remove JWT middleware."
-      scope:
-        includePaths: ["src/api/auth/", "src/middleware/"]
-
-    - name: "test-coverage"
-      model: "sonnet"
-      prompt: "Write comprehensive tests for the OAuth2 migration."
-      dependsOn: ["backend-api"]
-
-  lifecycle:
-    timeout: "2h"
-    budgetLimit: "30.00"
-    onComplete: "create-pr"
-    pullRequest:
-      targetBranch: "main"
-      titleTemplate: "feat(auth): migrate from JWT to OAuth2"
-```
-
 ## Example: Cowork Team
+
+A four-agent team that produces a Q3 business report — research, drafting, design, and gated email follow-up:
 
 ```yaml
 apiVersion: kagents.dev/v1alpha1
@@ -202,6 +162,59 @@ kubectl annotate agentteam q3-report \
   -n cowork-agents
 ```
 
+## Example: Coding Team
+
+A three-agent team migrating from JWT to OAuth2, with a PR opened on completion:
+
+```yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeam
+metadata:
+  name: auth-refactor
+  namespace: dev-agents
+spec:
+  repository:
+    url: "git@github.com:acme/backend.git"
+    branch: "main"
+    credentialsSecret: "git-credentials"
+
+  auth:
+    apiKeySecret: "anthropic-api-key"
+
+  lead:
+    model: "opus"
+    prompt: |
+      Coordinate the migration from JWT to OAuth2.
+      Assign backend-api, frontend-auth, and test-coverage to their tracks.
+      Validate integration when all tracks complete.
+
+  teammates:
+    - name: "backend-api"
+      model: "sonnet"
+      prompt: "Implement OAuth2 endpoints. Remove JWT middleware."
+      scope:
+        includePaths: ["src/api/auth/", "src/middleware/"]
+
+    - name: "test-coverage"
+      model: "sonnet"
+      prompt: "Write comprehensive tests for the OAuth2 migration."
+      dependsOn: ["backend-api"]
+
+  lifecycle:
+    timeout: "2h"
+    budgetLimit: "30.00"
+    onComplete: "create-pr"
+    pullRequest:
+      targetBranch: "main"
+      titleTemplate: "feat(auth): migrate from JWT to OAuth2"
+```
+
+## What kagents is not
+
+- **Not a general workflow engine.** kagents orchestrates AI agent *teams* with the agent protocol and human-in-the-loop semantics baked in. For arbitrary containerized DAGs, use [Argo Workflows](https://argoproj.github.io/workflows/) or [Temporal](https://temporal.io/).
+- **Not a model or an agent.** kagents runs a harness (Claude Code today); it doesn't ship the intelligence.
+- **Not a replacement for human judgment.** Approval gates and delivery review remain first-class.
+
 ## CRD Reference
 
 ### AgentTeam
@@ -210,8 +223,9 @@ The primary resource. Defines the full team, its workspace, lifecycle, and obser
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `spec.repository` | `RepositorySpec` | Git repo config (coding mode). Optional when `spec.workspace` is set. |
+| `spec.harness` | `string` | Agent runtime adapter. Defaults to `"claude-code"`. |
 | `spec.workspace` | `WorkspaceSpec` | Input/output volumes (Cowork mode). Optional when `spec.repository` is set. |
+| `spec.repository` | `RepositorySpec` | Git repo config (coding mode). Optional when `spec.workspace` is set. |
 | `spec.auth` | `AuthSpec` | API key or OAuth secret reference. |
 | `spec.lead` | `LeadSpec` | Lead agent model, prompt, skills, and MCP servers. |
 | `spec.teammates` | `[]TeammateSpec` | Worker agents with optional `dependsOn`, `scope`, `skills`, `mcpServers`. |
@@ -254,26 +268,26 @@ Watch team progress. The `Ready` column reports `running+completed/total` teamma
 ```bash
 kubectl get agentteams -A
 # NAME           PHASE      READY   TASKS DONE   COST    AGE
-# auth-refactor  Running    2/3     7            $1.42   14m
-# q3-report      Completed  2/2     12           $3.80   2h
+# q3-report      Running    2/3     7            $1.42   14m
+# auth-refactor  Completed  3/3     12           $3.80   2h
 ```
 
 Inspect details, including operator events emitted at every phase transition:
 
 ```bash
-kubectl describe agentteam auth-refactor -n dev-agents
+kubectl describe agentteam q3-report -n cowork-agents
 # Status:
 #   Phase: Running
 #   Ready: 2/3
 #   Estimated Cost: 1.42
 #   Lead:
-#     Pod Name: auth-refactor-lead
+#     Pod Name: q3-report-lead
 #     Phase: Running
 #   Teammates:
-#     - Name: backend-api,   Phase: Running
-#     - Name: test-coverage, Phase: Waiting  (dependsOn: backend-api)
+#     - Name: researcher,    Phase: Running
+#     - Name: email-drafter, Phase: Waiting  (approval-gated: spawn-email-drafter)
 # Events:
-#   Normal  Initializing  5m   agentteam-controller  Provisioned PVCs and launched init Job
+#   Normal  Initializing  5m   agentteam-controller  Provisioned PVCs and launched workspace
 #   Normal  Running       4m   agentteam-controller  All agent pods started
 ```
 
@@ -298,13 +312,13 @@ This README is the entry point. For deeper dives, every topic lives in a dedicat
 
 | Document | Read when you want to… |
 |----------|-----------------------|
+| [docs/product-vision.md](docs/product-vision.md) | Understand where the project is going — knowledge-work orchestration, harness-agnostic future, positioning, success metrics. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Understand how the operator models Agent Teams. Phase state machine, PVC layout, RWX storage backends, coordination protocol, key design tradeoffs. |
 | [TESTING.md](TESTING.md) | See the test strategy (unit / integration / acceptance / E2E), how to run each suite, and what each one actually verifies. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Set up a dev environment, run the full build/test loop, follow the branch + PR workflow, and walk through "How to add a new reconciler feature." |
 | [docs/helm-values.md](docs/helm-values.md) | Tune the Helm chart. Every value documented with defaults and production override recipes. |
 | [SECURITY.md](SECURITY.md) | Report a vulnerability or review the project's security policy. |
 | [MIGRATION.md](MIGRATION.md) | Upgrade between kagents versions. Currently covers the v0.7.x → v0.8.0 API-group migration (`claude.amcheste.io` → `kagents.dev`). |
-| [KUBECON.md](KUBECON.md) | See the talk framing and "interesting problems" log. Useful context for why specific architectural choices were made. |
 
 ## Development
 
@@ -321,3 +335,5 @@ make generate     # Regenerate deepcopy methods
 ## License
 
 Apache 2.0
+</content>
+</invoke>
