@@ -5,14 +5,14 @@ They're a directory mounted at `~/.claude/skills/{name}/` containing
 instructions, examples, and templates. kagents supports two
 distribution mechanisms:
 
-- **ConfigMap** — skill files live inside the cluster as a ConfigMap.
+- **ConfigMap**: skill files live inside the cluster as a ConfigMap.
   Simplest, no network. Good for skills authored alongside the team CR.
-- **OCI** — skill files are packaged as an OCI artifact in a registry
+- **OCI**: skill files are packaged as an OCI artifact in a registry
   (ghcr.io, ECR, GCR, internal Harbor, etc.) and pulled by an init
   container at pod startup. Versioned, signed, shared across clusters.
 
 This page covers the OCI path. ConfigMap skills are just key/value
-files — see the API reference for `SkillSource.configMap`.
+files. See the API reference for `SkillSource.configMap`.
 
 ## Anatomy of a skill
 
@@ -52,7 +52,7 @@ A few notes on the command above:
 - `--artifact-type` is conventional. The operator does not enforce it
   today; future versions may use it to validate that an OCI reference
   points at a skill rather than a random container image.
-- Tag immutably (`:v1`, `:v1.0.3`, or `@sha256:...`) — `:latest`
+- Tag immutably (`:v1`, `:v1.0.3`, or `@sha256:...`). `:latest`
   works but means every pod re-pulls in case the content moved.
 - Pin to a digest (`@sha256:...`) in production for byte-for-byte
   reproducibility and to let the registry short-circuit identical
@@ -118,7 +118,7 @@ shared cache between pods. Two practical consequences:
 - **Pin to digests** in production. The registry can cheaply skip
   identical content; mutable tags force a fresh pull each time.
 - **Skill artifacts should be small**. They're text + examples; if
-  yours is hundreds of MB, something is off — most skills measure in
+  yours is hundreds of MB, something is off. Most skills measure in
   kilobytes.
 
 ## Air-gapped clusters

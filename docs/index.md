@@ -35,7 +35,7 @@ helm install kagents \
 
     ---
 
-    One `AgentTeam` CRD declares roles, budget, quality gates, and coordination topology. `AgentTeamTemplate` lets you reuse common team patterns. "3-agent security review," "fullstack feature team". With one-line instantiation.
+    One `AgentTeam` CRD declares roles, budget, quality gates, and coordination topology. `AgentTeamTemplate` lets you reuse common team patterns ("3-agent security review", "fullstack feature team"), each instantiable in one line.
 
 -   :material-kubernetes:{ .lg .middle } **K8s as coordination fabric**
 
