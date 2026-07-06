@@ -42,7 +42,7 @@ vet: ## Run go vet
 
 .PHONY: test
 test: manifests generate fmt vet ## Run tests
-	go test ./... -coverprofile cover.out
+	go test ./... -race -coverprofile cover.out
 
 .PHONY: lint
 lint: ## Run golangci-lint
@@ -138,7 +138,7 @@ SETUP_ENVTEST = $(shell go env GOPATH)/bin/setup-envtest
 .PHONY: test-integration
 test-integration: manifests generate envtest ## Run integration tests using envtest (no cluster needed)
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
-	go test ./internal/controller/... -tags=integration -v -count=1
+	go test ./internal/controller/... -tags=integration -race -v -count=1
 
 .PHONY: test-all
 test-all: test test-integration ## Run unit tests and integration tests
