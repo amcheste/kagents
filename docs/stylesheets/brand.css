@@ -1,0 +1,652 @@
+/* kagents · alanchester-brand alignment
+ *
+ * Maps Material for MkDocs theme variables onto the ac-* tokens defined
+ * in ac-colors.css and ac-typography.css. Loaded last so it overrides
+ * Material's defaults at the cascade level.
+ *
+ * Temperament axes encoded here:
+ *   - warmth: cool           → palette is paper/ink/graphite/mist/hunter green
+ *   - contrast: high         → ink on warm white, no transitional shades
+ *   - edge softness: sharp   → border-radius collapses to 0 on chrome
+ *   - whitespace: austere    → tightened type scale, hairline dividers
+ *   - cadence: compressed    → leading on the snug side
+ *
+ * Hunter green discipline: the accent token is scarce on purpose.
+ * Links (a pivot to new content) and active nav state (you've pivoted
+ * to that page) earn it. Page chrome, dividers, eyebrows, and section
+ * tags do not. If you find yourself adding ac-accent to decoration,
+ * stop and use ink or muted instead.
+ */
+
+/* alanchester.com pulls the visual feel in three directions a typical
+ * mkdocs-material site does not go: a narrower content column with
+ * editorial breathing room, content blocks separated by whitespace
+ * rather than borders, and links that blend into the prose until you
+ * reach for them. The overrides below push in those three directions
+ * while keeping the structural affordances a docs site actually needs
+ * (sidebar nav, search, TOC).
+ */
+
+/* ── Light scheme: paper ground, ink text ─────────────────────────── */
+
+[data-md-color-scheme="default"] {
+  /* Page surfaces */
+  --md-default-bg-color:                var(--ac-paper);
+  --md-default-bg-color--light:         var(--ac-paper);
+  --md-default-bg-color--lighter:       var(--ac-paper);
+  --md-default-bg-color--lightest:      var(--ac-paper);
+
+  /* Text */
+  --md-default-fg-color:                var(--ac-ink);
+  --md-default-fg-color--light:         var(--ac-graphite);
+  --md-default-fg-color--lighter:       var(--ac-muted);
+  --md-default-fg-color--lightest:      var(--ac-mist);
+  --md-typeset-color:                   var(--ac-ink);
+
+  /* Primary (header, nav bar). Ink for high contrast, NOT accent.
+     The accent rule reserves green for data and pivots, not chrome. */
+  --md-primary-fg-color:                var(--ac-ink);
+  --md-primary-fg-color--light:         var(--ac-graphite);
+  --md-primary-fg-color--dark:          #000;
+  --md-primary-bg-color:                var(--ac-paper);
+  --md-primary-bg-color--light:         rgba(246, 244, 238, 0.7);
+
+  /* Accent — links + active state. Earned, not decorative. */
+  --md-accent-fg-color:                 var(--ac-accent);
+  --md-accent-fg-color--transparent:    rgba(31, 77, 58, 0.1);
+  --md-accent-bg-color:                 var(--ac-paper);
+  --md-accent-bg-color--light:          rgba(246, 244, 238, 0.7);
+  --md-typeset-a-color:                 var(--ac-accent);
+
+  /* Code surfaces: graphite ink on a slightly recessed mist. */
+  --md-code-fg-color:                   var(--ac-ink);
+  --md-code-bg-color:                   #efece5;
+  --md-code-hl-color:                   rgba(31, 77, 58, 0.12);
+
+  /* Admonition / table borders → mist hairline. */
+  --md-typeset-table-color:             var(--ac-mist);
+}
+
+/* ── Dark scheme: slate ground, paper text ────────────────────────── */
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 0;
+
+  --md-default-bg-color:                #141416;
+  --md-default-bg-color--light:         #1a1a1c;
+  --md-default-bg-color--lighter:       #1e1e22;
+  --md-default-bg-color--lightest:      #2b2b2e;
+
+  --md-default-fg-color:                var(--ac-text-on-dark);
+  --md-default-fg-color--light:         var(--ac-text-on-dark);
+  --md-default-fg-color--lighter:       var(--ac-muted-on-dark);
+  --md-default-fg-color--lightest:      var(--ac-rule-on-dark);
+  --md-typeset-color:                   var(--ac-text-on-dark);
+
+  --md-primary-fg-color:                #0B0B0C;
+  --md-primary-fg-color--light:         #1a1a1c;
+  --md-primary-fg-color--dark:          #000;
+  --md-primary-bg-color:                var(--ac-paper-on-dark);
+
+  --md-accent-fg-color:                 #5f9d7e;            /* lifted hunter-green for AA contrast on dark */
+  --md-accent-fg-color--transparent:    rgba(95, 157, 126, 0.12);
+  --md-typeset-a-color:                 #5f9d7e;
+
+  --md-code-fg-color:                   var(--ac-paper-on-dark);
+  --md-code-bg-color:                   #1a1a1c;
+
+  --md-typeset-table-color:             var(--ac-rule-on-dark);
+}
+
+/* ── Type ─────────────────────────────────────────────────────────── */
+
+body,
+.md-typeset {
+  font-family: var(--ac-sans);
+  font-feature-settings: "ss01", "cv09";          /* Plex stylistic alts that read sharper */
+}
+
+.md-typeset code,
+.md-typeset pre,
+.md-typeset kbd {
+  font-family: var(--ac-mono);
+}
+
+.md-header__topic,
+.md-header__title {
+  font-family: var(--ac-sans);
+  font-weight: var(--ac-weight-medium);
+  letter-spacing: var(--ac-track-snug);
+}
+
+/* Compressed cadence — tighten Material's defaults a touch.
+   The brand voice and visual rhythm both lean snug, not airy. */
+.md-typeset {
+  line-height: var(--ac-lead-normal);
+  letter-spacing: var(--ac-track-normal);
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  font-weight: var(--ac-weight-medium);
+  letter-spacing: var(--ac-track-snug);
+  line-height: var(--ac-lead-snug);
+}
+
+.md-typeset h1 {
+  font-weight: var(--ac-weight-medium);
+  letter-spacing: var(--ac-track-tight);
+}
+
+/* ── Sharp edges ──────────────────────────────────────────────────── */
+
+/* Material softens just about every surface by default. The temperament
+   axes call for sharp. Collapse radius on the chrome users actually
+   see; leave the subtle hover-feedback radii alone so interactions
+   still feel responsive. */
+.md-typeset .md-button,
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > :not(ul) > :not(li),
+.md-typeset table:not([class]),
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset code,
+.md-typeset pre,
+.md-typeset pre > code,
+.md-typeset .tabbed-set,
+.md-typeset .highlight,
+.md-search__form,
+.md-search__input,
+.md-nav__source {
+  border-radius: 0;
+}
+
+/* Hairline rules — mist on light, white-rule on dark. Section
+   boundaries are structural, not decorative. */
+.md-typeset hr,
+.md-header,
+.md-tabs,
+.md-footer-meta,
+.md-typeset table:not([class]) th,
+.md-typeset table:not([class]) td,
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > :not(ul) > :not(li) {
+  border-color: var(--md-typeset-table-color);
+}
+
+.md-header {
+  border-bottom: 1px solid var(--md-typeset-table-color);
+  box-shadow: none;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+
+/* On alanchester.com the dominant affordance for navigation is an
+ * inline arrow link ("More about me →"). Buttons here read closer to
+ * that pattern than to the ledger-uppercase chip used by typical
+ * docs-tool homepages. The primary button still has weight so the
+ * canonical CTA on the landing page isn't lost; the secondary is a
+ * borderless underlined link. */
+
+.md-typeset .md-button {
+  font-family: var(--ac-sans);
+  font-weight: var(--ac-weight-medium);
+  font-size: var(--ac-text-base);
+  letter-spacing: var(--ac-track-normal);
+  text-transform: none;
+  padding: 0;
+  margin-right: 1.6em;
+  border: 0;
+  border-bottom: 1px solid var(--ac-ink);
+  border-radius: 0;
+  color: var(--ac-ink);
+  background: transparent;
+  transition: color 120ms linear, border-color 120ms linear;
+}
+
+.md-typeset .md-button:hover,
+.md-typeset .md-button:focus {
+  color: var(--ac-accent);
+  border-bottom-color: var(--ac-accent);
+  background: transparent;
+}
+
+.md-typeset .md-button--primary {
+  padding: 0.75em 1.4em;
+  border: 1px solid var(--ac-ink);
+  border-bottom: 1px solid var(--ac-ink);   /* override the underline the base .md-button sets */
+  background: var(--ac-ink);
+  color: var(--ac-paper);
+  margin-right: 1.2em;
+}
+
+.md-typeset .md-button--primary:hover,
+.md-typeset .md-button--primary:focus {
+  background: var(--ac-accent);
+  border-color: var(--ac-accent);
+  color: var(--ac-paper);
+}
+
+/* ── Links ────────────────────────────────────────────────────────── */
+
+/* alanchester.com keeps inline links subtle. Underlined in ink, accent
+ * only when you reach for them. This restores the "green is earned"
+ * rule: every link is a potential pivot, but the visual weight only
+ * shifts when the reader actually considers following it.
+ *
+ * Scoped to direct descendants and prose blocks inside the typeset
+ * container, NOT to all anchors — the header brand link and inline
+ * card-link buttons aren't prose links and shouldn't pick up a
+ * mist underline. */
+
+.md-typeset p a,
+.md-typeset li a,
+.md-typeset td a,
+.md-typeset blockquote a,
+.md-typeset h1 a,
+.md-typeset h2 a,
+.md-typeset h3 a,
+.md-typeset h4 a,
+.md-typeset h5 a,
+.md-typeset h6 a {
+  color: var(--ac-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--ac-mist);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: color 120ms linear, text-decoration-color 120ms linear;
+}
+
+.md-typeset p a:hover,
+.md-typeset li a:hover,
+.md-typeset td a:hover,
+.md-typeset blockquote a:hover,
+.md-typeset h1 a:hover,
+.md-typeset h2 a:hover,
+.md-typeset h3 a:hover,
+.md-typeset h4 a:hover,
+.md-typeset h5 a:hover,
+.md-typeset h6 a:hover,
+.md-typeset p a:focus,
+.md-typeset li a:focus {
+  color: var(--ac-accent);
+  text-decoration-color: var(--ac-accent);
+}
+
+[data-md-color-scheme="slate"] .md-typeset p a,
+[data-md-color-scheme="slate"] .md-typeset li a {
+  color: var(--ac-paper-on-dark);
+  text-decoration-color: var(--ac-rule-on-dark);
+}
+
+/* ── Code blocks ──────────────────────────────────────────────────── */
+
+.md-typeset code {
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--md-typeset-table-color);
+  background: var(--md-code-bg-color);
+}
+
+.md-typeset pre > code {
+  padding: 1em 1.2em;
+  border: 1px solid var(--md-typeset-table-color);
+  line-height: var(--ac-lead-loose);
+  font-size: 0.92em;
+}
+
+/* ── Cards (material grid) ─────────────────────────────────────────── */
+
+/* alanchester.com presents content blocks with whitespace separation
+ * rather than enclosing borders. The Material `grid.cards` shortcode
+ * is too useful to ditch, so we keep the layout but drop the boxy
+ * frame: each card becomes a typographic island, separated by a
+ * single hairline at the top and generous internal padding. The
+ * hover state nudges the hairline to ink, signaling the card is
+ * interactive without re-introducing a box. */
+
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > :not(ul) > :not(li) {
+  border: 0;
+  border-top: 1px solid var(--md-typeset-table-color);
+  padding: 1.6em 0 0.4em;
+  background: transparent;
+  box-shadow: none;
+  transition: border-color 120ms linear;
+}
+
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > :not(ul) > :not(li):hover {
+  border-top-color: var(--ac-ink);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li:hover,
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > :not(ul) > :not(li):hover {
+  border-top-color: var(--ac-text-on-dark);
+}
+
+/* Icon glyphs sitting at the top of each card — give them a clean
+ * ledger row above the title, demoted to ink so green stays earned. */
+.md-typeset .grid.cards .twemoji.lg,
+.md-typeset .twemoji.lg.middle {
+  display: inline-block;
+  width: 1.4em;
+  height: 1.4em;
+  color: var(--ac-ink);
+}
+
+/* Card titles ride larger so they catch the eye without a border. */
+.md-typeset .grid.cards > ul > li > p:first-child,
+.md-typeset .grid.cards > :not(ul) > :not(li) > p:first-child {
+  margin-top: 0;
+}
+
+.md-typeset .grid.cards strong {
+  font-weight: var(--ac-weight-medium);
+  font-size: var(--ac-text-md);
+  letter-spacing: var(--ac-track-snug);
+}
+
+/* The `---` horizontal rule Material uses inside each card to separate
+ * the title row from the body becomes invisible on this layout. The
+ * whitespace + size hierarchy is doing the work. */
+.md-typeset .grid.cards hr {
+  display: none;
+}
+
+/* ── Admonitions ──────────────────────────────────────────────────── */
+
+.md-typeset .admonition,
+.md-typeset details {
+  border: 1px solid var(--md-typeset-table-color);
+  border-left-width: 3px;
+  box-shadow: none;
+  background: transparent;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  font-family: var(--ac-mono);
+  font-weight: var(--ac-weight-medium);
+  font-size: var(--ac-text-sm);
+  letter-spacing: var(--ac-track-loose);
+  text-transform: uppercase;
+  background: transparent;
+}
+
+/* ── Tables ───────────────────────────────────────────────────────── */
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--md-typeset-table-color);
+  font-size: 0.92em;
+}
+
+.md-typeset table:not([class]) th {
+  background: transparent;
+  font-family: var(--ac-mono);
+  font-size: var(--ac-text-xs);
+  letter-spacing: var(--ac-track-loose);
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+  border-bottom: 1px solid var(--md-typeset-table-color);
+}
+
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--md-typeset-table-color);
+}
+
+/* ── Navigation ───────────────────────────────────────────────────── */
+
+.md-nav__title {
+  font-family: var(--ac-mono);
+  font-size: var(--ac-text-xs);
+  letter-spacing: var(--ac-track-wide);
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Active nav entry — green is earned here. You've pivoted to that
+   page. The rule wants color on the noun that names the finding;
+   "the current page in the tree" qualifies. */
+.md-nav__item .md-nav__link--active {
+  color: var(--md-accent-fg-color);
+  font-weight: var(--ac-weight-medium);
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+
+.md-header {
+  background-color: var(--md-primary-fg-color);
+}
+
+/* No project logo on this site (see mkdocs.yml comment). Material
+ * still renders a fallback "library" icon in the logo slot when none
+ * is configured; hide it so the header reads as: hamburger, site
+ * name, search, repo, color toggle. The brand mark on this surface
+ * is the title typography itself. */
+.md-header__button.md-logo {
+  display: none;
+}
+
+/* Header brand link ("kagents" topic at the top-left) stays paper on
+ * ink, no underline, no accent shift. It's a chrome label, not a
+ * prose pivot. */
+.md-header__topic,
+.md-header__title a {
+  color: var(--md-primary-bg-color);
+  text-decoration: none;
+}
+
+/* ── Selection ────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--ac-mist);
+  color: var(--ac-ink);
+}
+
+[data-md-color-scheme="slate"] ::selection {
+  background: var(--ac-rule-on-dark);
+  color: var(--ac-paper-on-dark);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+
+.md-footer-meta {
+  background: var(--ac-ink);
+}
+
+.md-footer {
+  background: var(--md-default-bg-color--light);
+  color: var(--md-default-fg-color);
+}
+
+[data-md-color-scheme="slate"] .md-footer {
+  background: var(--md-default-bg-color--light);
+}
+
+/* ── Small touches ────────────────────────────────────────────────── */
+
+.md-typeset blockquote {
+  border-left: 3px solid var(--ac-ink);
+  padding-left: 1.2em;
+  font-style: normal;                             /* italics undercut the austere voice */
+  color: var(--md-default-fg-color--light);
+}
+
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+  border-left-color: var(--ac-paper-on-dark);
+}
+
+/* ── Editorial rhythm ────────────────────────────────────────────── */
+
+/* Narrower content column + bigger H1 push the docs reading
+ * experience toward alanchester.com's editorial feel without breaking
+ * the sidebar/TOC scaffolding readers rely on. */
+
+.md-content {
+  max-width: 48rem;
+  margin: 0 auto;
+  flex: 1 1 auto;     /* fill the centered group; TOC keeps its natural width */
+  min-width: 0;
+}
+
+.md-typeset h1 {
+  font-size: var(--ac-text-xl);
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+}
+
+.md-typeset h2 {
+  font-size: var(--ac-text-lg);
+  margin-top: 2.4em;
+  margin-bottom: 0.6em;
+  padding-top: 1.2em;
+  border-top: 1px solid var(--md-typeset-table-color);
+}
+
+/* The first H2 on a page hits right under the H1 — no extra ruled
+ * gap, since the H1's bottom margin already separates them. */
+.md-typeset h1 + h2 {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 1.2em;
+}
+
+.md-typeset h3 {
+  font-size: var(--ac-text-md);
+  margin-top: 2em;
+  margin-bottom: 0.4em;
+}
+
+/* The mathematical motif "∀ ε > 0, ∃ δ > 0" appears in the brand
+ * repo's README and on alanchester.com itself. The footer is the
+ * right home for it on a docs site: a quiet signature, present
+ * without being decorative. */
+
+.md-footer-meta::after {
+  content: "∀ ε > 0, ∃ δ > 0";
+  display: block;
+  font-family: var(--ac-mono);
+  font-size: var(--ac-text-xs);
+  letter-spacing: var(--ac-track-loose);
+  color: var(--ac-muted-on-dark);
+  padding: 0.4em 0 1em;
+  text-align: center;
+}
+
+/* Hide Material's default top-right "Made with Material for MkDocs"
+ * generator line so the motif above is the last line on every page —
+ * brand signature, not toolchain credit. */
+.md-footer-meta .md-footer-meta__inner {
+  padding-bottom: 0;
+}
+
+/* ── Hamburger-only navigation ─────────────────────────────────────── */
+
+/* alanchester.com keeps top nav small and text-based; the rest of the
+ * page is content. To match, we suppress Material's always-visible
+ * desktop sidebar and route the section nav through the drawer that
+ * Material ships for mobile. The hamburger label is forced visible at
+ * every viewport width; the primary sidebar's static-flex layout is
+ * swapped for the same fixed-position drawer the mobile breakpoint
+ * already uses.
+ *
+ * The right-hand TOC ("on this page") stays put. It's a wayfinding
+ * affordance for the page the reader is *already* on, not a structural
+ * sitemap, and editorial sites typically keep that visible too. */
+
+/* Drawer geometry applies at every viewport width. drawer.js owns the
+ * open state via the `data-brand-drawer` attribute on <html>; the JS
+ * preventDefault's Material's native checkbox at every width too, so
+ * the two systems don't fight.
+ *
+ * Three pieces of Material's compiled CSS contradict us:
+ *
+ *   1. `.md-sidebar { height: 0 }` at desktop collapses the panel
+ *   2. `.md-sidebar` base rule sets sticky positioning + 12.1rem width
+ *   3. Material's `:checked` open-state transform is wrapped in a
+ *      max-width media query so it never triggers above 76.25em
+ *
+ * Override every conflicting property explicitly. !important guards
+ * against Material's higher-specificity selectors (e.g.
+ * `.md-header--lifted~.md-container .md-sidebar`). */
+
+.md-sidebar--primary {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 16rem !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 1.2rem 0 !important;
+  background: var(--md-default-bg-color) !important;
+  transform: translateX(-100%);
+  z-index: 5;
+  border-right: 1px solid var(--md-typeset-table-color);
+}
+
+/* Transitions disabled in this iteration. An empirical CSSOM probe
+ * showed that even when the open-state rule's higher specificity wins
+ * the cascade for `transform`, Material's compiled CSS interferes
+ * with the transition firing (likely because Material sets `transform`
+ * via media-scoped rules whose computed value flips on attribute
+ * change without registering as a transition trigger). With
+ * transitions off, the cascade resolves cleanly: open=0, closed=-100%.
+ * A future iteration can re-introduce the slide animation via JS-
+ * driven class toggles if the snap-open feel is too abrupt. */
+html[data-brand-drawer="open"] .md-sidebar--primary {
+  transform: translateX(0);
+  box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.18);
+}
+
+.md-sidebar--primary .md-sidebar__scrollwrap {
+  height: 100% !important;
+  margin: 0 !important;
+  position: static !important;
+  width: 100%;
+}
+
+/* Overlay: present in DOM at every width but invisible until the
+ * drawer opens. Material's compiled .md-overlay rule shows it only
+ * at the mobile breakpoint; we want it everywhere. */
+.md-overlay {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 12, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms linear;
+  z-index: 4;
+}
+
+html[data-brand-drawer="open"] .md-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media screen and (min-width: 76.25em) {
+  /* Show the hamburger. Material hides it via display:none at this
+   * breakpoint; walk that back. */
+  .md-header__button.md-icon[for="__drawer"] {
+    display: inline-block;
+  }
+
+  /* Center the content + TOC group as a unit so the visual center
+   * of the page is actually centered. */
+  .md-main__inner {
+    max-width: 64rem;
+    margin: 1.5rem auto 0;
+    justify-content: center;
+  }
+}
+
+/* The hamburger glyph itself: match the rest of the chrome in weight
+ * and stroke. Material's default icon is fine; this just ensures it
+ * sits on the ink header without color drift. */
+.md-header__button.md-icon[for="__drawer"] svg {
+  fill: currentColor;
+}

@@ -10,7 +10,7 @@ The dashboard is a chart sub-component gated on `dashboard.enabled`:
 
 ```bash
 helm upgrade kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --reuse-values \
   --set dashboard.enabled=true
 ```
@@ -83,7 +83,7 @@ Apply it:
 
 ```bash
 helm upgrade kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --reuse-values \
   -f dashboard-values.yaml
 ```
@@ -108,7 +108,7 @@ By default the dashboard sees AgentTeams in **every** namespace (a `ClusterRoleB
 
 ```bash
 helm upgrade kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --reuse-values \
   --set dashboard.enabled=true \
   --set dashboard.namespace=dev-agents

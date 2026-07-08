@@ -14,9 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
-	"github.com/amcheste/claude-teams-operator/internal/controller"
-	"github.com/amcheste/claude-teams-operator/internal/metrics"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
+	"github.com/amcheste/kagents/internal/controller"
+	"github.com/amcheste/kagents/internal/delivery"
+	"github.com/amcheste/kagents/internal/harness"
+	"github.com/amcheste/kagents/internal/metrics"
 )
 
 var (
@@ -35,6 +37,7 @@ func main() {
 	var enableLeaderElection bool
 	var agentImage string
 	var initImage string
+	var skillPullerImage string
 	var skipInitScript bool
 	var pvcAccessMode string
 	var agentCommand string
@@ -44,6 +47,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager.")
 	flag.StringVar(&agentImage, "agent-image", "", "Override the container image used for agent pods (default: ghcr.io/amcheste/claude-code-runner:latest).")
 	flag.StringVar(&initImage, "init-image", "", "Override the container image used for the repo init Job (default: alpine/git:latest).")
+	flag.StringVar(&skillPullerImage, "skill-puller-image", "", "Override the container image used to pull OCI-distributed skills (default: ghcr.io/oras-project/oras:v1.2.0). Air-gapped clusters can pin to an internal mirror.")
 	flag.BoolVar(&skipInitScript, "skip-init-script", false, "Replace the init Job git-clone script with a no-op exit 0. Use in acceptance tests where no real repo is available.")
 	flag.StringVar(&pvcAccessMode, "pvc-access-mode", "", "Override PVC access mode for all operator-managed PVCs (ReadWriteMany|ReadWriteOnce). Defaults to ReadWriteMany. Set to ReadWriteOnce for single-node clusters like Kind.")
 	flag.StringVar(&agentCommand, "agent-command", "", "Override the agent container command as a comma-separated list (e.g. sh,-c,sleep 30 && exit 0). Used in acceptance tests to keep pods alive long enough to observe.")
@@ -61,7 +65,7 @@ func main() {
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "claude-teams-operator.amcheste.io",
+		LeaderElectionID:       "kagents.amcheste.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -69,11 +73,14 @@ func main() {
 	}
 
 	reconciler := &controller.AgentTeamReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		AgentImage:     agentImage,
-		InitImage:      initImage,
-		SkipInitScript: skipInitScript,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		AgentImage:       agentImage,
+		InitImage:        initImage,
+		SkillPullerImage: skillPullerImage,
+		SkipInitScript:   skipInitScript,
+		Harnesses:        harness.DefaultRegistry(),
+		Delivery:         delivery.NewDispatcher(),
 	}
 	if agentCommand != "" {
 		reconciler.AgentCommand = strings.Split(agentCommand, ",")
@@ -101,6 +108,24 @@ func main() {
 	}
 	if err = runReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AgentTeamRun")
+		os.Exit(1)
+	}
+
+	scheduleReconciler := &controller.AgentTeamScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	if err = scheduleReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AgentTeamSchedule")
+		os.Exit(1)
+	}
+
+	triggerReconciler := &controller.AgentTeamTriggerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	if err = triggerReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AgentTeamTrigger")
 		os.Exit(1)
 	}
 

@@ -21,8 +21,8 @@ You don't need any cloud accounts or external services. Everything runs on your 
 You'll also need the kagents repo cloned locally so you can use the included `make kind-create` setup script (which provisions a Kind cluster with the NFS-style RWX storage the operator needs):
 
 ```bash
-git clone https://github.com/amcheste/claude-teams-operator.git
-cd claude-teams-operator
+git clone https://github.com/amcheste/kagents.git
+cd kagents
 ```
 
 ## 1. Stand up a local cluster
@@ -46,7 +46,7 @@ kubectl cluster-info --context kind-claude-teams
 
 ```bash
 helm install kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --create-namespace
 ```
 
@@ -80,7 +80,7 @@ Replace `sk-ant-...` with your actual key from [console.anthropic.com](https://c
 This is a small Cowork-mode team. No git repo, just an output volume. The lead coordinates a single writer agent that produces a Markdown file.
 
 ```yaml title="hello-team.yaml"
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeam
 metadata:
   name: hello-team

@@ -1,4 +1,4 @@
-# AGENTS.md. Agent Team Guidelines for claude-teams-operator
+# AGENTS.md. Agent Team Guidelines for kagents
 
 ## When working as a teammate on this project
 

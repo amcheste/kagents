@@ -1,6 +1,10 @@
 # Architecture
 
-This document describes the design of the claude-teams-operator: how it models Claude Code Agent Teams as Kubernetes resources, why key decisions were made, and how the components fit together.
+This document describes the design of the kagents: how it models Claude Code Agent Teams as Kubernetes resources, why key decisions were made, and how the components fit together.
+
+> **Where the project is heading (kagents).** The project is pivoting to the harness-agnostic **kagents** brand — a Kubernetes-native knowledge-work orchestrator, with Claude Code as the first supported agent harness. The canonical forward plan lives in three docs:
+> [Product Vision](docs/product-vision.md) (why) · [Product Requirements](docs/knowledge-work-prd.md) (what) · [Technical Design](docs/knowledge-work-design.md) (how).
+> This document describes the system **as built today**; the design doc describes the deltas (rebrand, harness adapter seam, pipelines, scheduling, triggers, delivery, OCI skills) as they land.
 
 ## Overview
 
@@ -179,14 +183,14 @@ Approval gates prevent a teammate from being spawned until a human explicitly ap
 When the reconciler would otherwise spawn a teammate, it first checks:
 
 1. Is there an `ApprovalGateSpec` for this event?
-2. If yes, does the `AgentTeam` have the annotation `approved.claude.amcheste.io/{event}=true`?
+2. If yes, does the `AgentTeam` have the annotation `approved.kagents.dev/{event}=true`?
 
 If the annotation is absent, the teammate is not spawned. The reconciler marks the teammate's `status.pendingApproval` field and (if `channel: webhook`) POSTs a notification to the configured URL so an external system can present the approval request to a human.
 
 Approval is granted by annotating the `AgentTeam`:
 
 ```bash
-kubectl annotate agentteam my-team "approved.claude.amcheste.io/spawn-email-drafter=true"
+kubectl annotate agentteam my-team "approved.kagents.dev/spawn-email-drafter=true"
 ```
 
 The next reconcile loop (within 30 seconds) sees the annotation and spawns the teammate.
@@ -257,7 +261,7 @@ docker/
   Dockerfile.claude-code   # Claude Code runner image (agent pods)
   entrypoint.sh            # Agent pod startup: symlinks, skills, MCP, launch
 
-charts/claude-teams-operator/  # Helm chart
+charts/kagents/  # Helm chart
 
 hack/
   kind-setup.sh            # Kind cluster + NFS provisioner dev setup

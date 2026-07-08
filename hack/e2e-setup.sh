@@ -27,7 +27,7 @@ if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
 fi
 
 CLUSTER_NAME="${KIND_CLUSTER_NAME:-claude-teams-e2e}"
-OPERATOR_IMG="${OPERATOR_IMG:-ghcr.io/amcheste/claude-teams-operator:e2e}"
+OPERATOR_IMG="${OPERATOR_IMG:-ghcr.io/amcheste/kagents:e2e}"
 RUNNER_IMG="${RUNNER_IMG:-ghcr.io/amcheste/claude-code-runner:e2e}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"

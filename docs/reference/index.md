@@ -8,7 +8,7 @@ The lookup tables. Every CRD field, every Helm value, every CLI flag, with no na
 
 ## Coming next
 
-- **Helm chart values**. Every chart value documented with defaults and production override recipes (will migrate from the existing in-repo [`docs/helm-values.md`](https://github.com/amcheste/claude-teams-operator/blob/main/docs/helm-values.md))
+- **Helm chart values**. Every chart value documented with defaults and production override recipes (will migrate from the existing in-repo [`docs/helm-values.md`](https://github.com/amcheste/kagents/blob/main/docs/helm-values.md))
 
 ## Looking for a tutorial or recipe?
 

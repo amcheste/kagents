@@ -1,0 +1,29 @@
+/* alanchester-brand · color tokens
+ * For any ε > 0, there exists a δ > 0.
+ *
+ * Apply these on :root or any scope. Components reference them
+ * via var(--ac-*). Override on a parent element to theme a subtree.
+ */
+
+:root {
+  /* ── Core ─────────────────────────────────────────── */
+  --ac-ink:      #0B0B0C;  /* deep near-black · primary text, monogram fill */
+  --ac-graphite: #2B2B2E;  /* secondary text, body copy on paper */
+  --ac-muted:    #8A8A8E;  /* tertiary · captions, eyebrows, page numbers */
+  --ac-mist:     #E6E4DE;  /* dividers, hairlines, soft borders */
+  --ac-paper:    #F6F4EE;  /* canonical background · warm off-white */
+
+  /* ── Accent ───────────────────────────────────────── */
+  /* Green = the data, the pivot, the δ.
+   * Use only on words/marks that represent evidence or change. */
+  --ac-accent:   #1F4D3A;  /* Hunter Green · canonical accent */
+
+  /* Alternate accent. Rust/Terracotta. Available, not preferred. */
+  --ac-accent-alt: #B45A3C;
+
+  /* ── On-dark surfaces ─────────────────────────────── */
+  --ac-paper-on-dark: #FAF8F2;
+  --ac-rule-on-dark:  rgba(255, 255, 255, 0.18);
+  --ac-text-on-dark:  rgba(255, 255, 255, 0.85);
+  --ac-muted-on-dark: rgba(255, 255, 255, 0.55);
+}

@@ -9,11 +9,11 @@ Only the latest released version is actively maintained. Security fixes are issu
 | Latest release | ✅ |
 | Older releases | ❌ please upgrade |
 
-The latest release is the most recent `v*` tag on https://github.com/amcheste/claude-teams-operator/releases.
+The latest release is the most recent `v*` tag on https://github.com/amcheste/kagents/releases.
 
 ## Reporting a vulnerability
 
-**Please do not open a public issue, Discussion, or pull request for security vulnerabilities.** Use GitHub's [private vulnerability reporting](https://github.com/amcheste/claude-teams-operator/security/advisories/new) instead. That surface lets you submit confidentially, and the maintainer can collaborate with you on a fix without the report being visible to anyone else until it's resolved.
+**Please do not open a public issue, Discussion, or pull request for security vulnerabilities.** Use GitHub's [private vulnerability reporting](https://github.com/amcheste/kagents/security/advisories/new) instead. That surface lets you submit confidentially, and the maintainer can collaborate with you on a fix without the report being visible to anyone else until it's resolved.
 
 Please include in your report:
 
@@ -29,7 +29,7 @@ We follow a **coordinated disclosure** process:
 1. **Acknowledgement**. Within **7 days** of your report, the maintainer will confirm receipt and start triage.
 2. **Triage + fix**. Within **30 days**, you will receive either a fix candidate, a status update with a clear timeline, or a written explanation of why the report doesn't qualify as a vulnerability.
 3. **Embargo**. Fix development happens in private. We ask you to keep the issue confidential until the fix ships and is publicly announced. We will not embargo for longer than 90 days from the original report without your agreement.
-4. **Public disclosure**. Once the fix is released, we publish a [GitHub Security Advisory](https://github.com/amcheste/claude-teams-operator/security/advisories) with the details, affected versions, mitigation steps, and credit to you (unless you ask to remain anonymous).
+4. **Public disclosure**. Once the fix is released, we publish a [GitHub Security Advisory](https://github.com/amcheste/kagents/security/advisories) with the details, affected versions, mitigation steps, and credit to you (unless you ask to remain anonymous).
 5. **CVE assignment**. If the issue qualifies, we request a CVE through GitHub's CNA before public disclosure.
 
 ## What counts as a security issue

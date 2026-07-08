@@ -1,0 +1,635 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.0
+  name: agentteamtemplates.kagents.dev
+spec:
+  group: kagents.dev
+  names:
+    kind: AgentTeamTemplate
+    listKind: AgentTeamTemplateList
+    plural: agentteamtemplates
+    singular: agentteamtemplate
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.description
+      name: Description
+      type: string
+    - jsonPath: .spec.teammates
+      name: Teammates
+      type: integer
+    - jsonPath: .status.ready
+      name: Ready
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AgentTeamTemplate is a reusable team definition.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AgentTeamTemplateSpec defines a reusable team pattern.
+            properties:
+              coordination:
+                description: Coordination configures how agents communicate.
+                properties:
+                  beads:
+                    description: Beads configures optional Beads integration for persistent
+                      tracking.
+                    properties:
+                      doltServerPort:
+                        default: 3306
+                        description: DoltServerPort is the port for the Dolt SQL server.
+                        format: int32
+                        type: integer
+                      doltServerService:
+                        description: DoltServerService is the K8s service name for
+                          the Dolt SQL server.
+                        type: string
+                      enabled:
+                        description: Enabled turns on Beads tracking.
+                        type: boolean
+                    required:
+                    - enabled
+                    type: object
+                  mailboxBackend:
+                    default: shared-volume
+                    description: MailboxBackend determines how mailbox messages are
+                      transported.
+                    enum:
+                    - shared-volume
+                    - redis
+                    - nats
+                    type: string
+                  taskBackend:
+                    default: shared-volume
+                    description: TaskBackend determines how the shared task list is
+                      stored.
+                    enum:
+                    - shared-volume
+                    - beads
+                    type: string
+                type: object
+              description:
+                description: Description explains the template's purpose.
+                type: string
+              lifecycle:
+                description: Lifecycle configures default runtime behavior.
+                properties:
+                  approvalGates:
+                    description: |-
+                      ApprovalGates pause execution before specified events until human approval is recorded.
+                      Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true
+                    items:
+                      description: |-
+                        ApprovalGateSpec pauses execution before a named event until human approval is recorded.
+                        Approval is granted by adding the annotation approved.kagents.dev/{event}=true to the AgentTeam.
+                      properties:
+                        channel:
+                          default: none
+                          description: Channel is how the approval request notification
+                            is sent.
+                          enum:
+                          - webhook
+                          - none
+                          type: string
+                        event:
+                          description: Event is the gate identifier. Use "spawn-{teammate-name}"
+                            to gate spawning a specific teammate.
+                          type: string
+                        webhookUrl:
+                          description: WebhookURL to POST when this gate is triggered
+                            (used when channel is "webhook").
+                          type: string
+                      required:
+                      - event
+                      type: object
+                    type: array
+                  budgetLimit:
+                    description: BudgetLimit is the maximum API spend in USD before
+                      the team is terminated (e.g. "10.00").
+                    type: string
+                  consolidatedBranchTemplate:
+                    description: |-
+                      ConsolidatedBranchTemplate is a Go template rendered to produce the
+                      branch name pushed by OnComplete=push-branch. Available variables:
+                      .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
+                    type: string
+                  delivery:
+                    description: |-
+                      Delivery is the list of artifact delivery targets fired when
+                      OnComplete=deliver. Each target is dispatched independently;
+                      per-target success/failure is recorded in status.delivery[].
+                      Delivery failure is best-effort — the team is not rolled back to
+                      Failed if a target rejects the request.
+                    items:
+                      description: |-
+                        DeliveryTarget describes one artifact delivery destination fired when
+                        OnComplete=deliver. The Type discriminator selects which fields are
+                        meaningful — webhook + slack are functional in v0.8.0; email and
+                        google-drive are accepted at the API level and dispatched to senders
+                        that currently return a "not implemented" error recorded in
+                        status.delivery[].
+
+                        Across all types the operator never persists credentials itself; the
+                        sender pulls them from CredentialsSecret at dispatch time so a
+                        compromised operator pod can't enumerate Slack tokens / SMTP
+                        passwords / Drive service-account keys at rest.
+                      properties:
+                        artifactPath:
+                          description: |-
+                            ArtifactPath is the file path within the team's output workspace
+                            (typically /workspace/output) to attach to or send as the
+                            delivery body. Optional for delivery types that carry their
+                            message inline (e.g. a plain Slack notification with no file).
+                          type: string
+                        attachmentPath:
+                          description: |-
+                            AttachmentPath is a file path within the team's output workspace
+                            to attach to the email delivery. Equivalent to ArtifactPath but
+                            kept distinct because some emails attach + reference a separate
+                            artifact in the body.
+                          type: string
+                        channel:
+                          description: |-
+                            Channel is the destination for the slack delivery type
+                            (e.g. "#reports"). The slack sender reads
+                            CredentialsSecret["slack-webhook-url"] to know where to post.
+                          type: string
+                        credentialsSecret:
+                          description: |-
+                            CredentialsSecret names a Secret in the team's namespace carrying
+                            authentication for this target. Expected keys per type:
+
+                              - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL
+                              - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"
+                              - google-drive: "service-account.json"
+
+                            Not required for webhook; the URL is in the spec.
+                          type: string
+                        folder:
+                          description: |-
+                            Folder is the destination folder for the google-drive delivery
+                            type.
+                          type: string
+                        message:
+                          description: |-
+                            Message is the human-readable text that accompanies the delivery
+                            (Slack message text, webhook notes, email body lead-in).
+                          type: string
+                        subject:
+                          description: Subject is the message subject for the email
+                            delivery type.
+                          type: string
+                        to:
+                          description: To is the recipient list for the email delivery
+                            type.
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type names the delivery backend.
+                          enum:
+                          - webhook
+                          - slack
+                          - email
+                          - google-drive
+                          type: string
+                        url:
+                          description: URL is the destination for the webhook delivery
+                            type.
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    type: array
+                  gitCredentialsSecret:
+                    description: |-
+                      GitCredentialsSecret names a Secret in the team's namespace carrying git
+                      push credentials. The Secret must contain either 'ssh-privatekey' or
+                      'token'. Used by OnComplete=push-branch (and OnComplete=create-pr when
+                      push-branch runs ahead of it). Falls back to Spec.Repository.CredentialsSecret
+                      when unset, so teams that already configured clone credentials with push
+                      scope don't need to duplicate.
+                    type: string
+                  githubTokenSecret:
+                    description: |-
+                      GitHubTokenSecret names a Secret in the team's namespace carrying a
+                      GitHub token under the key GITHUB_TOKEN. Used by OnComplete=create-pr
+                      (and OnComplete=push-branch, once implemented) to authenticate against
+                      the GitHub REST API.
+                    type: string
+                  maxRestarts:
+                    default: 3
+                    description: |-
+                      MaxRestarts bounds how many times each teammate pod may be re-spawned
+                      after a Failed phase before the team itself is marked Failed. The lead
+                      pod is not subject to this limit; a lead crash always fails the team.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  onComplete:
+                    default: notify
+                    description: OnComplete determines what happens when the team
+                      finishes.
+                    enum:
+                    - create-pr
+                    - push-branch
+                    - notify
+                    - deliver
+                    - none
+                    type: string
+                  prTitleTemplate:
+                    description: |-
+                      PRTitleTemplate overrides the title template used by OnComplete=create-pr.
+                      Available variables: .TeamName, .Namespace. When empty, falls back to
+                      Spec.Lifecycle.PullRequest.TitleTemplate, then to the default
+                      "claude-teams: {{.TeamName}}".
+                    type: string
+                  pullRequest:
+                    description: PullRequest configures PR creation when onComplete
+                      is "create-pr".
+                    properties:
+                      labels:
+                        description: Labels to apply to the PR.
+                        items:
+                          type: string
+                        type: array
+                      reviewers:
+                        description: Reviewers to request on the PR.
+                        items:
+                          type: string
+                        type: array
+                      targetBranch:
+                        default: main
+                        description: TargetBranch is the branch to open the PR against.
+                        type: string
+                      titleTemplate:
+                        description: |-
+                          TitleTemplate is a Go template for the PR title.
+                          Available variables: .TeamName, .Namespace
+                        type: string
+                    type: object
+                  timeout:
+                    default: 4h
+                    description: Timeout is the maximum duration the team can run
+                      (e.g. "4h", "30m").
+                    type: string
+                type: object
+              qualityGates:
+                description: QualityGates configures default validation steps.
+                properties:
+                  requireLint:
+                    description: RequireLint ensures linting passes before completion.
+                    type: boolean
+                  requireTests:
+                    description: RequireTests ensures tests pass before completion.
+                    type: boolean
+                  validationScript:
+                    description: ValidationScript is a custom script to run before
+                      marking complete.
+                    type: string
+                type: object
+              teammates:
+                description: Teammates defines the worker agents in the template.
+                items:
+                  description: TeammateSpec defines a single teammate agent.
+                  properties:
+                    dependsOn:
+                      description: DependsOn lists teammate names that must complete
+                        before this one starts.
+                      items:
+                        type: string
+                      type: array
+                    inputs:
+                      description: |-
+                        Inputs declares the upstream-produced artifacts this teammate
+                        consumes. Each entry names a producer teammate (From) and an
+                        artifact basename (Artifact); the operator (a) treats From as
+                        an implicit dependency — this teammate is not spawned until the
+                        producer reaches Completed — and (b) wires an init container that
+                        stages the artifact at MountPath on this teammate's pod before
+                        the main container starts.
+                      items:
+                        description: |-
+                          InputSpec declares an artifact this teammate consumes from an upstream
+                          teammate's outputs. The operator (a) treats From as an implicit
+                          dependency — this teammate is not spawned until the producer reaches
+                          Completed — and (b) wires an init container that copies the named
+                          artifact onto MountPath on this teammate's pod before the main
+                          container starts. The final on-pod path is {MountPath}/{Artifact}.
+                        properties:
+                          artifact:
+                            description: |-
+                              Artifact is the basename of the producer's output file
+                              (e.g. "findings.md" for an output path of /workspace/output/findings.md).
+                              The operator resolves the full source path by scanning the named
+                              producer's Outputs[] for an entry whose Path basename matches.
+                            type: string
+                          from:
+                            description: From names the upstream teammate that produces
+                              the artifact.
+                            type: string
+                          mountPath:
+                            description: |-
+                              MountPath is the absolute directory path on this teammate's pod
+                              where the artifact will be made available. The operator creates
+                              an emptyDir at MountPath and stages the artifact there via an
+                              init container; the main container sees {MountPath}/{Artifact}.
+                            type: string
+                        required:
+                        - artifact
+                        - from
+                        - mountPath
+                        type: object
+                      type: array
+                    mcpServers:
+                      description: MCPServers configures Model Context Protocol connections
+                        for this teammate.
+                      items:
+                        description: MCPServerSpec configures a Model Context Protocol
+                          server for an agent.
+                        properties:
+                          credentialsSecret:
+                            description: CredentialsSecret references a Secret containing
+                              an 'apiKey' key for bearer auth.
+                            type: string
+                          name:
+                            description: Name identifies this MCP server in the agent's
+                              config.
+                            type: string
+                          url:
+                            description: URL is the MCP server endpoint.
+                            type: string
+                        required:
+                        - name
+                        - url
+                        type: object
+                      type: array
+                    model:
+                      default: sonnet
+                      description: Model to use for this teammate.
+                      enum:
+                      - opus
+                      - sonnet
+                      - haiku
+                      type: string
+                    name:
+                      description: Name is the unique identifier for this teammate.
+                      pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+                      type: string
+                    outputs:
+                      description: |-
+                        Outputs declares the artifacts this teammate produces. Each entry
+                        records a file path the teammate's prompt is expected to write.
+                        On completion the operator records every declared output in
+                        AgentTeam.Status.Artifacts and makes them available to any
+                        downstream teammate that consumes them via Inputs.
+                      items:
+                        description: |-
+                          OutputSpec declares a file an agent produces. Downstream teammates
+                          consume it by declaring a matching InputSpec; the operator also
+                          records each output in AgentTeam.Status.Artifacts on completion.
+                        properties:
+                          description:
+                            description: Description is an optional human-readable
+                              summary of the artifact.
+                            type: string
+                          path:
+                            description: |-
+                              Path is the absolute filesystem path on the producer pod where the
+                              teammate writes the artifact. For Cowork teams this is typically a
+                              path under the team's output mount (e.g. /workspace/output/findings.md).
+                            type: string
+                        required:
+                        - path
+                        type: object
+                      type: array
+                    prompt:
+                      description: Prompt is the spawn instruction for this teammate.
+                      type: string
+                    resources:
+                      description: Resources defines compute resources for this teammate's
+                        pod.
+                      properties:
+                        claims:
+                          description: |-
+                            Claims lists the names of resources, defined in spec.resourceClaims,
+                            that are used by this container.
+
+                            This field depends on the
+                            DynamicResourceAllocation feature gate.
+
+                            This field is immutable. It can only be set for containers.
+                          items:
+                            description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                            properties:
+                              name:
+                                description: |-
+                                  Name must match the name of one entry in pod.spec.resourceClaims of
+                                  the Pod where this field is used. It makes that resource available
+                                  inside a container.
+                                type: string
+                              request:
+                                description: |-
+                                  Request is the name chosen for a request in the referenced claim.
+                                  If empty, everything from the claim is made available, otherwise
+                                  only the result of this request.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - name
+                          x-kubernetes-list-type: map
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: |-
+                            Limits describes the maximum amount of compute resources allowed.
+                            More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: |-
+                            Requests describes the minimum amount of compute resources required.
+                            If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                            otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                            More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                          type: object
+                      type: object
+                    scope:
+                      description: Scope restricts which files this teammate can access.
+                      properties:
+                        excludePaths:
+                          description: ExcludePaths lists paths the teammate should
+                            not modify.
+                          items:
+                            type: string
+                          type: array
+                        includePaths:
+                          description: IncludePaths lists paths the teammate should
+                            focus on.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    skills:
+                      description: Skills to mount into .claude/skills/ for this teammate.
+                      items:
+                        description: SkillSpec defines a Claude Code skill to mount
+                          into an agent pod.
+                        properties:
+                          name:
+                            description: Name is the skill directory name under .claude/skills/.
+                            type: string
+                          source:
+                            description: Source identifies where to load the skill
+                              from.
+                            properties:
+                              configMap:
+                                description: |-
+                                  ConfigMap references a ConfigMap in the same namespace.
+                                  Each key in the ConfigMap becomes a file in the skill directory.
+                                type: string
+                              oci:
+                                description: |-
+                                  OCI is an OCI artifact reference containing the skill files
+                                  (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+                                  an `oras pull` init container at pod startup to materialize the
+                                  skill onto an emptyDir; the main container then sees the files
+                                  under ~/.claude/skills/{name}/. Private registries are supported
+                                  via spec.imagePullSecrets.
+
+                                  Re-pull semantics: the init container runs once per pod start,
+                                  so the artifact is re-pulled on every pod create. There is no
+                                  shared cache between pods — operators who want one should pin
+                                  to immutable digests so the registry can short-circuit identical
+                                  pulls cheaply.
+                                type: string
+                            type: object
+                        required:
+                        - name
+                        - source
+                        type: object
+                        x-kubernetes-validations:
+                        - message: skill source must set exactly one of configMap
+                            or oci
+                          rule: '(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci)
+                            ? 1 : 0) == 1'
+                      type: array
+                  required:
+                  - name
+                  - prompt
+                  type: object
+                maxItems: 16
+                minItems: 1
+                type: array
+            required:
+            - teammates
+            type: object
+          status:
+            description: |-
+              AgentTeamTemplateStatus reports validation state for an AgentTeamTemplate.
+              The reconciler validates teammate references and writes a Ready condition;
+              AgentTeamRun controllers should refuse to instantiate templates where
+              Ready is false.
+            properties:
+              conditions:
+                description: Conditions track the latest validation state with structured
+                  reasons.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              ready:
+                description: |-
+                  Ready is true when the template has passed validation and is safe to
+                  instantiate via an AgentTeamRun.
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,6 +1,6 @@
 # Helm Values Reference
 
-Complete reference for the [`claude-teams-operator` Helm chart](../charts/claude-teams-operator). Every key from [`values.yaml`](../charts/claude-teams-operator/values.yaml) is documented here.
+Complete reference for the [`kagents` Helm chart](../charts/kagents). Every key from [`values.yaml`](../charts/kagents/values.yaml) is documented here.
 
 > **Conventions used below:**
 > - **Default** is what ships when you `helm install` without overrides.
@@ -10,8 +10,8 @@ Complete reference for the [`claude-teams-operator` Helm chart](../charts/claude
 ## Quick install
 
 ```bash
-helm install claude-teams-operator \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+helm install kagents \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --create-namespace
 ```
 
@@ -29,7 +29,7 @@ To override values, use `--set key=value` or `--values overrides.yaml`. To inspe
 
 | Key | Default | Description |
 |---|---|---|
-| `image.repository` | `ghcr.io/amcheste/claude-teams-operator` | Operator container image. Pinned to the release tag at chart publish time. |
+| `image.repository` | `ghcr.io/amcheste/kagents` | Operator container image. Pinned to the release tag at chart publish time. |
 | `image.tag` | `latest` | Operator image tag. Released charts pin this to the matching release version. |
 | `image.pullPolicy` | `IfNotPresent` | One of `Always`, `IfNotPresent`, `Never`. |
 
@@ -54,7 +54,7 @@ The image used for every spawned agent pod (lead + teammates). Configurable per-
 | Key | Default | Description |
 |---|---|---|
 | `serviceAccount.create` | `true` | If false, the chart will not create a ServiceAccount; you must reference an existing one via `serviceAccount.name`. |
-| `serviceAccount.name` | `claude-teams-operator` | Name of the operator's ServiceAccount. The hand-written ClusterRole binds to this name. |
+| `serviceAccount.name` | `kagents` | Name of the operator's ServiceAccount. The hand-written ClusterRole binds to this name. |
 
 ## Resources
 
@@ -195,7 +195,7 @@ storage:
 imagePullSecrets:
   - name: ghcr-creds   # docker-registry secret in the release namespace
 image:
-  repository: registry.internal/claude-teams-operator
+  repository: registry.internal/kagents
   tag: 0.5.0
 claudeCodeImage:
   repository: registry.internal/claude-code-runner
@@ -214,4 +214,4 @@ kubectl rollout restart deployment/<release>-controller-manager -n claude-teams-
 
 ## Regenerating this document
 
-This doc is hand-written to keep the rendered output controllable. When `values.yaml` changes, update this file in the same PR. Future automation (`helm-docs`) is tracked in [#89](https://github.com/amcheste/claude-teams-operator/issues/89).
+This doc is hand-written to keep the rendered output controllable. When `values.yaml` changes, update this file in the same PR. Future automation (`helm-docs`) is tracked in [#89](https://github.com/amcheste/kagents/issues/89).

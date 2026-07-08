@@ -1,8 +1,9 @@
-# claude-teams-operator Makefile
+# kagents Makefile
 
-IMG ?= ghcr.io/amcheste/claude-teams-operator:latest
+IMG ?= ghcr.io/amcheste/kagents:latest
 CLAUDE_CODE_IMG ?= ghcr.io/amcheste/claude-code-runner:latest
 DASHBOARD_IMG ?= ghcr.io/amcheste/claude-teams-dashboard:latest
+TRIGGER_IMG ?= ghcr.io/amcheste/kagents-trigger:latest
 KIND_CLUSTER_NAME ?= claude-teams
 
 # Tool versions
@@ -24,8 +25,8 @@ manifests: controller-gen ## Generate CRD manifests
 	# crds/ on `helm install` (but not on upgrade, by design). Without this
 	# `helm install` deploys the operator but leaves it crash-looping waiting
 	# for CRDs that were never applied.
-	@mkdir -p charts/claude-teams-operator/crds
-	@cp -f config/crd/bases/*.yaml charts/claude-teams-operator/crds/
+	@mkdir -p charts/kagents/crds
+	@cp -f config/crd/bases/*.yaml charts/kagents/crds/
 
 .PHONY: generate
 generate: controller-gen ## Generate deepcopy methods
@@ -41,7 +42,7 @@ vet: ## Run go vet
 
 .PHONY: test
 test: manifests generate fmt vet ## Run tests
-	go test ./... -coverprofile cover.out
+	go test ./... -race -coverprofile cover.out
 
 .PHONY: lint
 lint: ## Run golangci-lint
@@ -68,6 +69,10 @@ docker-build-runner: ## Build Claude Code runner Docker image
 .PHONY: docker-build-dashboard
 docker-build-dashboard: ## Build dashboard web UI Docker image
 	docker build -t $(DASHBOARD_IMG) -f docker/Dockerfile.dashboard .
+
+.PHONY: docker-build-trigger
+docker-build-trigger: ## Build kagents-trigger webhook listener Docker image
+	docker build -t $(TRIGGER_IMG) -f docker/Dockerfile.trigger .
 
 .PHONY: docker-push
 docker-push: ## Push operator image
@@ -117,12 +122,12 @@ sample: ## Deploy sample AgentTeam
 
 .PHONY: helm-install
 helm-install: ## Install via Helm
-	helm install claude-teams-operator ./charts/claude-teams-operator \
+	helm install kagents ./charts/kagents \
 		--namespace claude-teams-system --create-namespace
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall Helm release
-	helm uninstall claude-teams-operator --namespace claude-teams-system
+	helm uninstall kagents --namespace claude-teams-system
 
 ##@ Testing
 
@@ -133,7 +138,7 @@ SETUP_ENVTEST = $(shell go env GOPATH)/bin/setup-envtest
 .PHONY: test-integration
 test-integration: manifests generate envtest ## Run integration tests using envtest (no cluster needed)
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
-	go test ./internal/controller/... -tags=integration -v -count=1
+	go test ./internal/controller/... -tags=integration -race -v -count=1
 
 .PHONY: test-all
 test-all: test test-integration ## Run unit tests and integration tests

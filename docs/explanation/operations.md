@@ -8,7 +8,7 @@ Claude Code does not expose real-time token usage to the outside world. The oper
 
 ### How the estimate works
 
-The estimator (in [`internal/budget`](https://github.com/amcheste/claude-teams-operator/tree/main/internal/budget)) treats every active agent session as if it consumes a fixed token rate per minute. The rate per million tokens uses Anthropic's published list price, applied to a **heuristic of 50,000 input + 5,000 output tokens per active minute** per agent.
+The estimator (in [`internal/budget`](https://github.com/amcheste/kagents/tree/main/internal/budget)) treats every active agent session as if it consumes a fixed token rate per minute. The rate per million tokens uses Anthropic's published list price, applied to a **heuristic of 50,000 input + 5,000 output tokens per active minute** per agent.
 
 | Model | Input ($/M tokens) | Output ($/M tokens) | Approx. cost / minute / agent |
 |-------|-------------------:|--------------------:|------------------------------:|
@@ -88,7 +88,12 @@ The operator exposes Prometheus metrics, ships a Grafana dashboard, and fires we
 
 ### Prometheus metrics
 
-The operator binary exposes `/metrics` on port 8080 by default. Eight series, all labeled by team name and (where applicable) teammate name + model:
+The operator binary exposes `/metrics` on port 8080 by default. Two
+prefix families are emitted in parallel: the original `claude_*` series
+that have been there since v0.3.0 (kept stable to avoid breaking
+existing dashboards), and a `kagents_*` family added in v0.8.0 that
+covers knowledge-work observability (pipeline stages, artifacts,
+delivery). Both stream from the same `/metrics` endpoint.
 
 | Metric | Type | Description |
 |--------|------|-------------|
@@ -100,11 +105,16 @@ The operator binary exposes `/metrics` on port 8080 by default. Eight series, al
 | `claude_teammate_restarts_total` | counter | Pod restarts per teammate |
 | `claude_team_budget_remaining_usd` | gauge | `budgetLimit - estimatedCostUsd` |
 | `claude_teammate_idle_seconds` | histogram | Time between task completions per teammate |
+| `kagents_team_pipeline_stage_active` | gauge | 1 while a pipeline stage is in `Running`, 0 otherwise. Labels: `team`, `namespace`, `stage` |
+| `kagents_team_stage_duration_seconds` | histogram | Stage wall-clock duration observed once at the `Running → Completed` transition |
+| `kagents_team_artifacts_produced_total` | counter | Artifacts appended to `status.artifacts` per teammate |
+| `kagents_team_delivery_success_total` | counter | Successful `onComplete: deliver` dispatches, by target type |
+| `kagents_team_delivery_failure_total` | counter | Failed deliveries by target type |
 
 Wire them to Prometheus by enabling the chart's ServiceMonitor:
 
 ```bash
-helm upgrade kagents ./charts/claude-teams-operator \
+helm upgrade kagents ./charts/kagents \
   --set metrics.serviceMonitor.enabled=true
 ```
 
@@ -113,7 +123,7 @@ helm upgrade kagents ./charts/claude-teams-operator \
 The chart ships a curated Grafana dashboard as a ConfigMap with the `grafana_dashboard: "1"` label. With the standard `kube-prometheus-stack`, the Grafana sidecar auto-imports it within ~30 seconds.
 
 ```bash
-helm upgrade kagents ./charts/claude-teams-operator \
+helm upgrade kagents ./charts/kagents \
   --set metrics.serviceMonitor.enabled=true \
   --set metrics.grafanaDashboard.enabled=true
 ```
@@ -150,13 +160,13 @@ When the reconciler would otherwise spawn the gated teammate, it instead:
 
 1. Marks the teammate's `status.pendingApproval` field
 2. Fires a `completed` webhook event with the gate name
-3. Waits for the annotation `approved.claude.amcheste.io/spawn-email-drafter=true`
+3. Waits for the annotation `approved.kagents.dev/spawn-email-drafter=true`
 
 Grant approval:
 
 ```bash
 kubectl annotate agentteam my-team \
-  approved.claude.amcheste.io/spawn-email-drafter=true
+  approved.kagents.dev/spawn-email-drafter=true
 ```
 
 Within 30 seconds (the default reconcile interval), the gated teammate spawns and joins the team.

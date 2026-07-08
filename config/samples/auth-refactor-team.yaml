@@ -1,4 +1,4 @@
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeam
 metadata:
   name: auth-refactor

@@ -23,7 +23,7 @@ linters:
 
 linters-settings:
   goimports:
-    local-prefixes: github.com/amcheste/claude-teams-operator
+    local-prefixes: github.com/amcheste/kagents
 
 issues:
   exclude-rules:

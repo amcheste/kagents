@@ -1,0 +1,71 @@
+# OCI skill distribution sample — a Cowork team whose teammates load
+# skills from an OCI registry instead of ConfigMaps.
+#
+# Behavior:
+#   - For each skill with `source.oci`, the operator adds an init
+#     container that runs `oras pull` into a per-skill emptyDir.
+#   - The main container mounts the same emptyDir read-only at
+#     /var/claude-skills/{name}/; the runner entrypoint copies it to
+#     ~/.claude/skills/{name}/ before launching Claude Code.
+#   - ConfigMap-backed skills still work — both sources can coexist
+#     on the same teammate.
+#   - Private registries: list a kubernetes.io/dockerconfigjson Secret
+#     under spec.imagePullSecrets. The operator both (a) propagates it
+#     to the pod for kubelet image pulls, and (b) mounts its
+#     .dockerconfigjson into the puller init container so ORAS sees
+#     credentials via $DOCKER_CONFIG.
+#
+# Setup before applying (only if any skill is in a private registry):
+#   kubectl -n cowork-agents create secret docker-registry ghcr-creds \
+#     --docker-server=ghcr.io \
+#     --docker-username=$GHCR_USER \
+#     --docker-password=$GHCR_PAT
+#
+# Apply with:
+#   kubectl apply -n cowork-agents -f config/samples/oci-skills-team.yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeam
+metadata:
+  name: market-research
+  namespace: cowork-agents
+spec:
+  workspace:
+    output:
+      mountPath: "/workspace/output"
+      size: "1Gi"
+
+  auth:
+    apiKeySecret: "anthropic-api-key"
+
+  # Optional — only needed for private skill registries. The operator
+  # propagates this to the agent pod and to skill-puller init
+  # containers so both layers see credentials.
+  imagePullSecrets:
+    - name: ghcr-creds
+
+  lead:
+    model: "opus"
+    prompt: |
+      Coordinate a market-research brief. Use the web-research skill
+      to gather sources and the report-writing skill to format the
+      output.
+
+  teammates:
+    - name: "researcher"
+      model: "sonnet"
+      prompt: |
+        Research the topic and write findings to
+        /workspace/output/findings.md. Use the skills you've been
+        given for instructions.
+      skills:
+        # Public skill — pulled from a public registry, no creds needed.
+        - name: web-research
+          source:
+            oci: "ghcr.io/kagents/skills/web-research:v1"
+        # Private skill — works because spec.imagePullSecrets is set.
+        - name: report-writing
+          source:
+            oci: "ghcr.io/acme-internal/skills/report-writing:v3"
+      outputs:
+        - path: "/workspace/output/findings.md"
+          description: "Research findings."

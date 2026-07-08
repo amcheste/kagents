@@ -1,6 +1,6 @@
 // Package v1alpha1 contains API Schema definitions for the claude v1alpha1 API group.
 // +kubebuilder:object:generate=true
-// +groupName=claude.amcheste.io
+// +groupName=kagents.dev
 package v1alpha1
 
 import (
@@ -10,7 +10,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "claude.amcheste.io", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "kagents.dev", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionResource scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

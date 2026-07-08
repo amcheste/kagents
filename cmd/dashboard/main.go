@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
-	"github.com/amcheste/claude-teams-operator/internal/dashboard"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
+	"github.com/amcheste/kagents/internal/dashboard"
 )
 
 var scheme = runtime.NewScheme()
