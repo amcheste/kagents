@@ -1,434 +1,347 @@
-# Technical Design: Knowledge Work Orchestrator Extensions
+# Technical Design — kagents Knowledge Work Orchestrator
 
-**Document owner:** Alan Chester
-**Last updated:** 2026-05-12
-**Status:** Draft
-**Linear milestone:** v0.8.0 — Knowledge Work Orchestrator
+> **Status:** Draft for review
+> **Audience:** implementers of the rebrand and the knowledge-work features
+> **Companion docs:** [Product Vision](product-vision.md) · [PRD](knowledge-work-prd.md)
 
----
+## Scope and reading order
 
-## Scope
+This document specifies two bodies of work, in the order they execute:
 
-This document describes the technical design for extending claude-teams-operator with knowledge work primitives: output routing, pipeline stages, scheduled teams, result delivery, OCI skills, and event triggers. All extensions are backward-compatible with existing AgentTeam CRs.
+- **Part I — Rebrand & harness abstraction.** Neutralize the Claude-specific identity (module path, API group, brand) and introduce a thin harness-adapter seam. Lands *first* so everything below is born under the `kagents.dev` API group. Maps to the **kagents rebrand & harness abstraction** milestone.
+- **Part II — Knowledge-work CRD architecture.** Output routing, pipelines, scheduling, event triggers, result delivery, OCI skills, and pipeline-aware observability. Maps to the **Knowledge Work Orchestrator** milestone.
 
-## Architecture Changes from Current State
+Read [ARCHITECTURE.md](../ARCHITECTURE.md) first for the current operator design (phases, PVC layout, coordination protocol). This document describes the *deltas* from that baseline.
 
-The current architecture (documented in ARCHITECTURE.md) has a single reconciler (`AgentTeamReconciler`) managing the full lifecycle of AgentTeam CRs. The knowledge work extensions add:
-
-1. New fields on the existing `AgentTeamSpec` (output routing, pipelines, delivery)
-2. A new reconciler for `AgentTeamSchedule`
-3. A new reconciler for `AgentTeamTrigger`
-4. A delivery subsystem (`internal/delivery/`)
-5. An OCI skill pull mechanism (init container)
-
-```
-                        ┌──────────────────────────────┐
-                        │     claude-teams-operator     │
-                        ├──────────────────────────────┤
-                        │ AgentTeamReconciler           │ ← existing + output routing
-                        │   + pipeline stage logic      │   + pipeline stages
-                        │   + artifact tracking         │   + delivery dispatch
-                        │   + delivery dispatch         │
-                        ├──────────────────────────────┤
-                        │ AgentTeamScheduleReconciler   │ ← new
-                        │   + cron evaluation           │
-                        │   + run creation              │
-                        │   + history garbage collection│
-                        ├──────────────────────────────┤
-                        │ AgentTeamTriggerReconciler    │ ← new (v0.9.0)
-                        │   + webhook server            │
-                        │   + payload injection         │
-                        ├──────────────────────────────┤
-                        │ internal/delivery/            │ ← new
-                        │   webhook.go                  │
-                        │   slack.go                    │
-                        │   email.go                    │
-                        │   gdrive.go                   │
-                        └──────────────────────────────┘
-```
+A guiding constraint throughout: **the operator already does not speak the agent coordination protocol** — it only provisions the shared PVC and lets the agent harness manage mailboxes/tasks. That existing separation is what makes both the harness abstraction and the knowledge-work features tractable without a rewrite.
 
 ---
 
-## 1. Output Routing
+# Part I — Rebrand & harness abstraction
 
-### CRD Types
+## I.1 The harness adapter seam
+
+### Goal
+
+Make the agent runtime an explicit, swappable seam so that "kagents runs Claude Code" becomes "kagents runs Claude Code *today*, via one adapter." Do this **without** building a plugin SPI, registry, or second adapter — those are deferred until a real second harness exists (the YAGNI guardrail from the [vision](product-vision.md#long-term-direction-agnostic-to-the-agent-harness)).
+
+### Where the boundary goes
+
+Today the Claude coupling is concentrated in a small surface. The seam formalizes it:
+
+| Concern | Today | After |
+|---|---|---|
+| Runner image | hardcoded `claude-code-runner` | provided by the selected harness adapter |
+| Pod env / launch | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, `~/.claude/teams` + `~/.claude/tasks` symlinks in `entrypoint.sh` | the claude-code adapter contributes these; the operator just applies what the adapter returns |
+| Valid models | `opus\|sonnet\|haiku` enum in the CRD | adapter declares its model set; CRD field becomes a free-ish string validated by the adapter |
+| Budget rates | hardcoded rate table in `internal/budget` | adapter supplies per-model rates |
+| Everything else (PVCs, Jobs, RBAC, scheduling, lifecycle, routing, delivery) | operator core | **unchanged — already harness-neutral** |
+
+### The interface (internal, thin)
+
+A single internal Go interface, consulted by the pod builder. Illustrative shape:
 
 ```go
-// OutputSpec declares a file this teammate will produce.
-type OutputSpec struct {
-    // Path is the absolute path where the output will be written.
-    Path string `json:"path"`
-    // Description is a human-readable description of the artifact.
-    // +optional
-    Description string `json:"description,omitempty"`
-}
-
-// InputSpec declares a dependency on another teammate's output.
-type InputSpec struct {
-    // From is the name of the upstream teammate.
-    From string `json:"from"`
-    // Artifact is the filename to consume from the upstream output.
-    Artifact string `json:"artifact"`
-    // MountPath is where the artifact will be available in this pod.
-    MountPath string `json:"mountPath"`
-}
-
-// ArtifactStatus records a produced artifact.
-type ArtifactStatus struct {
-    Name       string      `json:"name"`
-    ProducedBy string      `json:"producedBy"`
-    Size       string      `json:"size"`
-    ProducedAt metav1.Time `json:"producedAt"`
-    Path       string      `json:"path"`
-}
-```
-
-### Reconciler Behavior
-
-In `reconcileRunning`, after detecting a teammate pod has Succeeded:
-
-```
-1. List declared outputs for the completed teammate
-2. For each output:
-   a. Exec into a utility pod (or the lead pod) to stat the file
-   b. Record in status.artifacts: {name, producedBy, size, producedAt, path}
-3. For each other teammate with inputs[].from == completed teammate:
-   a. Copy (or symlink) the artifact to inputs[].mountPath
-   b. Mark the input as satisfied
-4. Check if downstream teammates have all inputs satisfied AND dependsOn met
-5. If yes, spawn the downstream teammate
-```
-
-### File Operations
-
-The operator needs to inspect and copy files on the shared PVC. Two approaches:
-
-**Option A: kubectl exec into lead pod.** The lead pod is always running during the team lifecycle. The operator can exec `cp` and `stat` commands. Pro: no additional pods. Con: couples file operations to lead pod health.
-
-**Option B: Short-lived utility Job.** Spawn a lightweight busybox job that mounts the PVC, copies files, and exits. Pro: decoupled from agent pods. Con: latency of Job creation.
-
-**Recommendation:** Option A for v0.8.0 (simpler), with Option B as fallback if the lead has terminated.
-
----
-
-## 2. Pipeline Stages
-
-### CRD Types
-
-```go
-// PipelineSpec defines a multi-stage workflow.
-type PipelineSpec struct {
-    // Stages defines the ordered stages of the pipeline.
-    // +kubebuilder:validation:MinItems=2
-    // +kubebuilder:validation:MaxItems=20
-    Stages []StageSpec `json:"stages"`
-}
-
-// StageSpec defines a single pipeline stage.
-type StageSpec struct {
-    // Name is the unique identifier for this stage.
-    Name string `json:"name"`
-    // Teammates lists the teammate names that execute in this stage.
-    // +kubebuilder:validation:MinItems=1
-    Teammates []string `json:"teammates"`
-    // DependsOn lists stage names that must complete before this stage starts.
-    // +optional
-    DependsOn []string `json:"dependsOn,omitempty"`
-    // Fan controls how teammates in this stage are started.
-    // +kubebuilder:validation:Enum=parallel;merge
-    // +kubebuilder:default="parallel"
-    Fan string `json:"fan,omitempty"`
-    // ApprovalRequired blocks this stage until a human approves.
-    // +optional
-    ApprovalRequired bool `json:"approvalRequired,omitempty"`
-}
-
-// PipelineStatus reports pipeline execution state.
-type PipelineStatus struct {
-    CurrentStage    string        `json:"currentStage,omitempty"`
-    StagesCompleted int           `json:"stagesCompleted"`
-    StagesTotal     int           `json:"stagesTotal"`
-    Stages          []StageStatus `json:"stages,omitempty"`
-}
-
-// StageStatus reports a single stage's state.
-type StageStatus struct {
-    Name            string      `json:"name"`
-    Phase           string      `json:"phase"` // Pending, Waiting, Running, Completed, Failed
-    StartedAt       *metav1.Time `json:"startedAt,omitempty"`
-    CompletedAt     *metav1.Time `json:"completedAt,omitempty"`
-    DurationSeconds int64       `json:"durationSeconds,omitempty"`
-    TeammatesReady  string      `json:"teammatesReady,omitempty"` // "2/3"
-}
-```
-
-### Stage Transition Logic
-
-```
-func evaluateStages(team, currentStatus):
-    for each stage in spec.pipeline.stages:
-        if stage already Completed: continue
-
-        // Check dependencies
-        allDepsMet = true
-        for dep in stage.dependsOn:
-            depStage = findStageStatus(dep)
-            if stage.fan == "merge":
-                // ALL teammates in dep stage must be Succeeded
-                if depStage.phase != "Completed": allDepsMet = false
-            else:
-                // At least one teammate completed (for data availability)
-                if depStage.phase not in ["Running", "Completed"]: allDepsMet = false
-
-        if not allDepsMet: mark stage Pending, continue
-
-        // Check approval gate
-        if stage.approvalRequired:
-            annotation = "approved.claude.amcheste.io/stage-{stage.name}"
-            if annotation not present: mark stage Waiting, continue
-
-        // Deploy teammates for this stage
-        for teammate in stage.teammates:
-            if not alreadyDeployed(teammate):
-                deployTeammatePod(teammate)
-
-        mark stage Running
-        break  // Only one stage transitions per reconcile loop
-```
-
-### Validation
-
-A validating webhook rejects CRs where:
-- `spec.pipeline` is set AND any teammate has `dependsOn` set
-- A stage references a teammate name not in `spec.teammates`
-- Stage dependencies form a cycle
-- A stage depends on itself
-
----
-
-## 3. AgentTeamSchedule
-
-### CRD Types
-
-```go
-// AgentTeamScheduleSpec defines a scheduled team pattern.
-type AgentTeamScheduleSpec struct {
-    // Schedule is a cron expression (5-field, no seconds).
-    Schedule string `json:"schedule"`
-    // TemplateRef references an AgentTeamTemplate.
-    TemplateRef TemplateReference `json:"templateRef"`
-    // Auth configures API authentication.
-    Auth AuthSpec `json:"auth"`
-    // Workspace or Repository configuration.
-    // +optional
-    Workspace *WorkspaceSpec `json:"workspace,omitempty"`
-    // +optional
-    Repository *RepositorySpec `json:"repository,omitempty"`
-    // Lifecycle overrides.
-    // +optional
-    Lifecycle *LifecycleSpec `json:"lifecycle,omitempty"`
-    // HistoryLimit is the number of completed runs to retain.
-    // +kubebuilder:default=5
-    HistoryLimit int32 `json:"historyLimit,omitempty"`
-}
-
-// AgentTeamScheduleStatus reports schedule state.
-type AgentTeamScheduleStatus struct {
-    LastScheduledAt *metav1.Time `json:"lastScheduledAt,omitempty"`
-    NextScheduledAt *metav1.Time `json:"nextScheduledAt,omitempty"`
-    ActiveRun       string       `json:"activeRun,omitempty"`
-    TotalRuns       int32        `json:"totalRuns"`
-    Conditions      []metav1.Condition `json:"conditions,omitempty"`
-}
-```
-
-### Reconciler
-
-```
-func (r *AgentTeamScheduleReconciler) Reconcile(ctx, req):
-    1. Fetch AgentTeamSchedule CR
-    2. Parse cron schedule with robfig/cron
-    3. Compute nextScheduledAt from lastScheduledAt
-    4. If now >= nextScheduledAt AND no activeRun:
-       a. Create AgentTeamRun from templateRef + overrides
-       b. Set status.activeRun = run name
-       c. Set status.lastScheduledAt = now
-       d. Increment status.totalRuns
-    5. If activeRun exists, check if it's terminal:
-       a. If terminal, clear activeRun
-    6. Garbage-collect: list runs owned by this schedule,
-       delete oldest beyond historyLimit
-    7. Compute and set status.nextScheduledAt
-    8. Requeue at nextScheduledAt
-```
-
-### Dependencies
-
-- `robfig/cron/v3` for cron parsing
-- Owner references from Schedule -> Run for garbage collection
-
----
-
-## 4. Result Delivery
-
-### Package Structure
-
-```
-internal/delivery/
-    delivery.go     // Interface + dispatcher
-    webhook.go      // HTTP POST with artifact
-    slack.go        // Slack webhook or API
-    email.go        // SMTP
-    gdrive.go       // Google Drive API
-```
-
-### Interface
-
-```go
-type Deliverer interface {
-    Deliver(ctx context.Context, spec DeliverySpec, artifactPath string) error
+// internal/harness/harness.go
+type Harness interface {
+    // Name is the spec.harness enum value, e.g. "claude-code".
     Name() string
-}
-
-type Dispatcher struct {
-    deliverers map[string]Deliverer
-}
-
-func (d *Dispatcher) DeliverAll(ctx, specs []DeliverySpec, outputPVCPath string) []DeliveryStatus {
-    var results []DeliveryStatus
-    for _, spec := range specs {
-        deliverer := d.deliverers[spec.Type]
-        err := deliverer.Deliver(ctx, spec, filepath.Join(outputPVCPath, spec.ArtifactPath))
-        status := DeliveryStatus{
-            Type:   spec.Type,
-            Target: spec.targetDescription(),
-            Phase:  "Delivered",
-        }
-        if err != nil {
-            status.Phase = "Failed"
-            status.Error = err.Error()
-        }
-        results = append(results, status)
-    }
-    return results
+    // RunnerImage returns the default image for this harness (overridable).
+    RunnerImage() string
+    // Decorate mutates a teammate/lead PodSpec to add the harness-specific
+    // env, volume mounts, and command needed for the coordination protocol.
+    Decorate(pod *corev1.PodSpec, role AgentRole, team *AgentTeam) error
+    // Models returns the valid model identifiers and their budget rates.
+    Models() map[string]ModelRate
 }
 ```
 
-### Delivery Execution
+`spec.harness` (default `claude-code`) selects the adapter from a small static map in `cmd/manager`. **No dynamic registry, no out-of-tree plugins** in this phase. Adding a second harness later means: implement the interface, add one map entry — the seam is in the right place to make that contained.
 
-Delivery runs as a phase between "all teammates Succeeded" and "team Completed":
+### CRD change
 
-```
-reconcileRunning:
-    ...
-    if allTeammatesSucceeded AND qualityGatesPassed:
-        if spec.lifecycle.onComplete == "deliver":
-            // Run delivery as a Job that mounts the output PVC
-            createDeliveryJob(team)
-            team.status.phase = "Delivering"
-        else:
-            team.status.phase = "Completed"
-
-reconcileDelivering:
-    // Check delivery Job status
-    if job Succeeded:
-        // Read delivery results from Job output
-        team.status.delivery = parseDeliveryResults(job)
-        team.status.phase = "Completed"
-    if job Failed:
-        team.status.delivery = [{phase: "Failed", error: "..."}]
-        team.status.phase = "Completed"  // Still completed, delivery just failed
+```yaml
+spec:
+  harness: claude-code   # enum, default "claude-code"; omitted == claude-code
 ```
 
-This adds a `Delivering` phase to the state machine between `Running` and `Completed`.
+Backward compatible: existing CRs omit it and get identical behavior. This is the *only* API addition in Part I — everything else in Part I is renames and internal refactoring.
 
----
+### Validation note
 
-## 5. OCI Skill Distribution
+Use a CEL validation rule (`x-kubernetes-validations`) on the model field to defer model-set validation to runtime where the adapter is known, rather than a static enum. (See [I.4](#i4-no-admission-webhooks-use-cel) on why we avoid admission webhooks.)
 
-### Pull Mechanism
+## I.2 Module path migration
 
-When a teammate declares a skill with `source.oci`, the operator adds an init container to the pod spec:
+`github.com/amcheste/claude-teams-operator` → `github.com/amcheste/kagents`.
+
+- Mechanical: `go.mod` module directive + every internal import across `api/`, `cmd/`, `internal/`, `test/`; Dockerfile build targets; Makefile; CI workflow refs.
+- Regenerate: `make generate manifests` (regenerates deepcopy headers and CRD paths).
+- Atomic PR — the module path cannot be half-migrated. Land/close open PRs first.
+- **Depends on the repo rename** so the module path matches the canonical repo location.
+
+## I.3 API group migration — clean break
+
+`claude.amcheste.io/v1alpha1` → `kagents.dev/v1alpha1`. Version stays `v1alpha1`; only the group changes. Using the owned domain as the group is the K8s convention (`cert-manager.io`, `argoproj.io`).
+
+**Clean break** (decided): no conversion webhook. Acceptable pre-1.0 with effectively no external installs to protect.
+
+Surface to change:
+- `+groupName=kagents.dev` marker + `api/v1alpha1/groupversion_info.go`
+- Regenerated CRDs (`config/crd/bases/`, `charts/*/crds/`), deepcopy, RBAC role
+- CRD resource names change implicitly: `agentteams.claude.amcheste.io` → `agentteams.kagents.dev`
+- **Annotation keys** derived from the group: `approved.claude.amcheste.io/{event}` → `approved.kagents.dev/{event}` (audit `internal/controller` + ARCHITECTURE.md §Approval Gates)
+- All `apiVersion:` in `config/samples/`, docs, tutorials, README
+- `docs/reference/api/` regenerated
+
+### `MIGRATION.md` (new, user-facing)
+
+Because it's a clean break, any existing install migrates by re-creating resources:
+
+```bash
+# 1. Export any in-flight CRs you want to keep (optional; re-apply with new apiVersion)
+kubectl get agentteams,agentteamtemplates,agentteamruns -A -o yaml > teams-backup.yaml
+
+# 2. Remove the old CRDs (cascades to CRs) and operator
+helm uninstall kagents
+kubectl delete crd agentteams.claude.amcheste.io \
+  agentteamtemplates.claude.amcheste.io agentteamruns.claude.amcheste.io
+
+# 3. Install the kagents.dev build
+helm install kagents ./charts/kagents
+
+# 4. Re-apply CRs after find/replacing apiVersion: claude.amcheste.io/v1alpha1
+#    → apiVersion: kagents.dev/v1alpha1
+```
+
+MIGRATION.md states plainly: this is a one-time breaking change made deliberately while the project is pre-1.0; no automated data migration is provided.
+
+## I.4 No admission webhooks — use CEL
+
+Several knowledge-work features need cross-field validation (e.g. "`pipeline` and flat `dependsOn` are mutually exclusive"). The project currently ships **no admission webhooks** by design (no webhook server, no cert wiring). We keep it that way and use **CRD CEL validation rules** (`x-kubernetes-validations`, GA since k8s 1.25; we're on 0.36):
 
 ```go
-func addOCISkillInitContainer(podSpec *corev1.PodSpec, skill SkillSpec) {
-    initContainer := corev1.Container{
-        Name:  fmt.Sprintf("pull-skill-%s", skill.Name),
-        Image: "ghcr.io/oras-project/oras:v1.2.0",
-        Command: []string{"sh", "-c", fmt.Sprintf(
-            "oras pull %s -o /skills/%s/",
-            skill.Source.OCI, skill.Name,
-        )},
-        VolumeMounts: []corev1.VolumeMount{{
-            Name:      "skills",
-            MountPath: "/skills",
-        }},
-    }
-    podSpec.InitContainers = append(podSpec.InitContainers, initContainer)
-}
+// +kubebuilder:validation:XValidation:rule="!(has(self.pipeline) && self.teammates.exists(t, has(t.dependsOn)))",message="spec.pipeline and spec.teammates[].dependsOn are mutually exclusive"
 ```
 
-The main container mounts the same `skills` emptyDir volume and the entrypoint copies to `~/.claude/skills/`.
+This keeps the no-webhook architecture, avoids cert-manager/Service plumbing, and pushes validation into the API server. Any AMC issue text that says "validation webhook" should be read as "CEL validation rule."
 
-### Private Registry Support
+## I.5 Backward compatibility summary
 
-If `spec.imagePullSecrets` is set, the init container receives registry credentials via:
-- Mounting the pull secret as a Docker config
-- Setting `DOCKER_CONFIG` env var
+| Change | Breaks existing CRs? | Mitigation |
+|---|---|---|
+| Module path | No (internal only) | — |
+| API group (clean break) | **Yes** — must re-apply under new group | MIGRATION.md; pre-1.0, ~no external users |
+| `spec.harness` added | No — defaults to `claude-code` | Omitted == current behavior |
+| Image/chart renames | Deploy-time only | New tags + Helm value defaults |
 
 ---
 
-## 6. AgentTeamTrigger (v0.9.0)
+# Part II — Knowledge-work CRD architecture
 
-### Webhook Server
+All examples below use the post-rebrand `kagents.dev/v1alpha1` group. These features are designed *together* so they compose; [II.8](#ii8-how-the-pieces-compose) is the load-bearing section.
 
-The operator exposes an additional HTTP server (separate from metrics/health) for trigger webhooks:
+## II.1 Output routing
+
+Structured artifact handoff: a teammate's declared outputs become a downstream teammate's mounted inputs.
+
+```yaml
+teammates:
+  - name: researcher
+    prompt: "Analyze data; write findings to /workspace/output/findings.md"
+    outputs:
+      - path: /workspace/output/findings.md
+        description: Research findings summary
+  - name: report-writer
+    prompt: "Read /workspace/stage/research/findings.md; produce the Q3 report"
+    inputs:
+      - from: researcher
+        artifact: findings.md
+        mountPath: /workspace/stage/research/
+```
+
+**Types:** `OutputSpec{path, description}`, `InputSpec{from, artifact, mountPath}` on `TeammateSpec`; `ArtifactStatus{name, producedBy, size, producedAt}` on status.
+
+**Operator behavior** on teammate pod `Succeeded`:
+1. Verify declared `outputs[].path` exist on the output PVC; missing files → teammate error status.
+2. Record `status.artifacts`.
+3. For each downstream teammate whose `inputs[].from` matches, make artifacts available at `mountPath` (copy within the shared output PVC; see design note).
+4. Spawn downstream teammate when its inputs are satisfied **and** its ordering constraint is met.
+
+**Design note — how artifacts move:** all agents already share the output PVC (RWX). "Routing" is therefore a *copy/symlink within one volume*, not a cross-volume transfer — cheap, no new volume plumbing. The operator runs the copy itself (it has no need to speak the agent protocol to move files). For coding mode, the analogous handoff is the existing git-worktree/branch mechanism; output routing is a Cowork-mode concern.
+
+## II.2 Pipeline stages
+
+`spec.pipeline` models multi-stage workflows with explicit fan-out/merge, as an alternative to flat per-teammate `dependsOn`.
+
+```yaml
+spec:
+  pipeline:
+    stages:
+      - name: research
+        teammates: [data-analyst]
+      - name: analysis
+        teammates: [market-analyst, financial-analyst, competitive-analyst]
+        dependsOn: [research]
+        fan: parallel          # all start once dependsOn stages complete (default)
+      - name: synthesis
+        teammates: [report-writer]
+        dependsOn: [analysis]
+        fan: merge             # starts only after ALL teammates in dependsOn stages Succeed
+      - name: distribution
+        teammates: [email-drafter]
+        dependsOn: [synthesis]
+        approvalRequired: true # stage-level approval gate (reuses annotation mechanism)
+```
+
+**Types:** `PipelineSpec{stages []StageSpec}`, `StageSpec{name, teammates, dependsOn, fan, approvalRequired}` on spec; `PipelineStatus{currentStage, stagesCompleted, stagesTotal, stages []StageStatus}` on status.
+
+**Relationship to existing `dependsOn`:** pipeline is *stage-level* ordering; the existing per-teammate `dependsOn` is *teammate-level*. They're mutually exclusive (CEL rule, [I.4](#i4-no-admission-webhooks-use-cel)) to avoid two competing ordering systems in one CR. The reconciler's existing dependency-aware spawn logic (ARCHITECTURE.md §DependsOn) generalizes to stages — a stage is "ready" when its `dependsOn` stages reach the required completion (`merge` = all teammates Succeeded).
+
+**`approvalRequired`** reuses the existing approval-gate annotation mechanism (`approved.kagents.dev/stage-{name}`), not a new system.
+
+## II.3 AgentTeamSchedule
+
+A new CRD that instantiates teams on a cron schedule — the operator's "CronJob for knowledge work."
+
+```yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeamSchedule
+metadata: {name: weekly-standup-summary, namespace: cowork-agents}
+spec:
+  schedule: "0 6 * * MON"
+  templateRef: {name: standup-summarizer}
+  auth: {apiKeySecret: anthropic-api-key}
+  workspace: {inputs: [{configMap: team-channels}]}
+  lifecycle: {timeout: "1h", budgetLimit: "10.00"}
+  historyLimit: 5
+```
+
+**Controller:** new `AgentTeamScheduleReconciler`. Mirrors the upstream `CronJob` controller pattern — parse with `robfig/cron`, on each reconcile determine if a run is due for the current window, create an `AgentTeamRun` from `templateRef` + overrides, GC completed runs beyond `historyLimit`. **Idempotency** via a deterministic run name per window (`{schedule}-{unix-window}`) so a requeue can't double-fire.
+
+**Status:** `lastScheduledAt`, `nextScheduledAt`, `activeRun`, `runs[]`.
+
+## II.4 AgentTeamTrigger
+
+A new CRD that instantiates teams in response to external events.
+
+```yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeamTrigger
+metadata: {name: new-deal-onboarding, namespace: cowork-agents}
+spec:
+  trigger:
+    webhook: {path: /hooks/new-deal, secret: webhook-hmac-secret}
+    # watchResource: {apiVersion: v1, kind: ConfigMap, namespace: sales, labelSelector: "type=new-deal"}
+  templateRef: {name: deal-onboarding-team}
+  auth: {apiKeySecret: anthropic-api-key}
+  payloadInjection: {mountPath: /workspace/data/trigger-payload.json}
+  concurrencyPolicy: Allow   # Allow | Forbid | Replace
+```
+
+**Controller + server:** a lightweight HTTP server for webhook triggers, validated by HMAC when `secret` is set; on a valid event it creates an `AgentTeamRun` and stores the payload as a ConfigMap mounted at `payloadInjection.mountPath`. `concurrencyPolicy` governs overlap.
+
+**Design decision — server topology:** run the webhook listener as its **own Deployment/Service** (`kagents-trigger`), *not* folded into the operator's manager process. Rationale: it's an ingress-exposed, internet-reachable surface with a very different security/scaling profile from the reconcile loop; coupling it to the manager would put a public endpoint in the leader-elected controller pod. This mirrors how the dashboard already ships as a separate, optional sub-deployment. Gated behind a Helm value (`trigger.enabled`, default false).
+
+## II.5 Result delivery
+
+A new `onComplete: deliver` mode plus a `delivery[]` list of targets.
+
+```yaml
+lifecycle:
+  onComplete: deliver
+  delivery:
+    - {type: slack,        channel: "#reports", artifactPath: /workspace/output/q3-report.pdf, message: "Q3 report ready."}
+    - {type: email,        to: [team@acme.com], subject: "Q3 Report", attachmentPath: /workspace/output/q3-report.pdf, credentialsSecret: smtp-credentials}
+    - {type: google-drive, folder: "Shared Reports/Q3", artifactPath: /workspace/output/, credentialsSecret: gdrive-service-account}
+    - {type: webhook,      url: "https://hooks.example.com/reports", artifactPath: /workspace/output/q3-report.pdf}
+```
+
+**Pattern:** delivery runs as a **short-lived Job after teammates complete and quality gates pass** — structurally identical to the existing `push-branch`/`create-pr` finalization Job ([reuse `runFinalization`](../internal/controller/agentteam_controller.go)). Each target type is a package under `internal/delivery/` (`slack`, `email`, `gdrive`, `webhook`). Implement **webhook first** (simplest), then slack, email, gdrive.
+
+**Failure semantics:** delivery failure is recorded in `status.delivery[]` but does **not** roll the team back to `Failed` — the knowledge work is done; delivery is best-effort post-processing. This matches the issue and is the right call (don't lose a completed $5 report because Slack 500'd).
+
+**Security:** the delivery Job (not the operator) consumes the `credentialsSecret`s, mounted only into that Job's pod — the operator never reads SMTP/Drive creds, consistent with the existing MCP-credential handling in ARCHITECTURE.md §MCP Servers.
+
+## II.6 OCI skill distribution
+
+Extend skill sources from ConfigMap-only to OCI artifacts.
+
+```yaml
+teammates:
+  - name: financial-analyst
+    skills:
+      - {name: financial-analysis, source: {oci: "ghcr.io/<org>/kagents-skills/financial-analysis:v2"}}
+      - {name: report-writing,     source: {configMap: report-writing-skill}}  # still supported
+```
+
+**Mechanism:** when a skill has `source.oci`, the operator adds an **init container** (using `oras` or `crane`) that pulls the artifact into a shared `emptyDir`, which the main container mounts at `~/.claude/skills/{name}/`. ConfigMap skills keep working (backward compatible). Private registries via `spec.imagePullSecrets`. Cache by digest to avoid re-pulling.
+
+**Skill artifact convention:** `SKILL.md` (required) + optional `examples/`, `templates/`, pushed with `oras` under a `application/vnd.kagents.skill.v1+*` media type. Ships with `docs/skills-authoring.md`.
+
+**Harness interaction:** skills are a Claude-Code concept today (`~/.claude/skills/`). The *mount path* is harness-specific, so the skill-mount step is contributed by the harness adapter ([I.1](#i1-the-harness-adapter-seam-amc-155)); the OCI *pull* is harness-neutral.
+
+## II.7 Pipeline-aware observability
+
+The status fields introduced by output routing (`status.artifacts`) and pipelines (`status.pipeline`) are the data; this is the surfacing layer.
+
+**Prometheus metrics:** `kagents_team_stage_duration_seconds` (histogram), `kagents_team_artifacts_produced_total` (counter), `kagents_team_pipeline_stage_active` (gauge), `kagents_team_delivery_success_total` / `_failure_total` (counters). *(Note the metric prefix rebrands `claude_` → `kagents_`; fold this into the API-group migration sweep so dashboards/alerts change once.)*
+
+**Dashboard:** stage progress bar in the team detail view; artifact list with download links. Extends the existing SSE-driven dashboard.
+
+**`kubectl describe`:** pipeline stage summary in the printer columns / additional-printer output.
+
+## II.8 How the pieces compose
+
+The features are deliberately orthogonal layers, not overlapping mechanisms:
 
 ```
-Operator Pod
-  :8080  ← metrics
-  :8081  ← health/ready
-  :9090  ← trigger webhooks (new)
+AgentTeamSchedule ─┐
+AgentTeamTrigger  ─┼─► AgentTeamRun ─► AgentTeam ──► pipeline (stage ordering)
+(manual apply)    ─┘                                   └► teammates ──► output routing (data flow)
+                                                                          └► onComplete: deliver (targets)
+                                       observability (status + metrics) wraps all of it
 ```
 
-Each `AgentTeamTrigger` CR registers a path on the webhook server. Incoming POSTs are validated, the payload is stored as a ConfigMap, and an AgentTeamRun is created.
+Key composition decisions:
 
-The webhook server is optional and gated on `triggers.enabled` in the Helm values.
+1. **One instantiation path.** `AgentTeamSchedule` and `AgentTeamTrigger` both create an `AgentTeamRun`, which already knows how to resolve a template into an `AgentTeam`. They do **not** each reimplement team creation — they're thin producers in front of the existing `AgentTeamRun` controller. This is the single most important reuse decision; it keeps template-resolution logic in one place.
+2. **Ordering vs data flow are separate axes.** `pipeline` (or `dependsOn`) decides *when* a teammate runs; output routing decides *what data* it starts with. A stage can fan out to 3 analysts (ordering) each of whom consumes the researcher's `findings.md` (data flow). They compose; neither subsumes the other.
+3. **Delivery is a finalization mode,** reusing the `runFinalization` Job pattern alongside `create-pr`/`push-branch` — not a new lifecycle phase.
+4. **`spec.harness` sits underneath all of it.** Pipelines, schedules, triggers, routing, and delivery are harness-neutral; only model selection and the runner pod touch the adapter. None of the Part II CRDs may hardcode `claude`/model assumptions.
 
----
+## II.9 Phasing
 
-## Migration Path
+Per the "rebrand first" decision, and a suggested renumber (rebrand = v0.8.0, knowledge work = v0.9.0):
 
-All changes are additive. Existing AgentTeam CRs work without modification:
+**Milestone 1 — rebrand:** repo rename → module path → API group (clean break) → harness seam → image/chart names. Strictly first.
 
-- `spec.pipeline` is optional. If absent, flat `dependsOn` works as before.
-- `outputs/inputs` are optional. If absent, the shared PVC is a flat namespace as before.
-- `onComplete: deliver` is a new enum value. Existing values (`create-pr`, `notify`, etc.) are unchanged.
-- `AgentTeamSchedule` and `AgentTeamTrigger` are new CRDs with no impact on existing resources.
+**Milestone 2 — knowledge work, suggested order:**
+1. **Output routing** + **pipeline** — the core primitives; everything else references them.
+2. **AgentTeamSchedule** + **AgentTeamTrigger** — instantiation, both on the shared `AgentTeamRun` path.
+3. **Delivery** + **OCI skills** — integrations; delivery starts with the webhook target.
+4. **Observability** — cross-cutting, lands last so it can surface all the above.
+5. **README/positioning reframe** — lands with or just after the features it describes.
 
-### CRD Versioning
+## II.10 Testing strategy
 
-All new types are added to `v1alpha1`. If breaking changes are needed before v1.0.0, we version to `v1alpha2` with a conversion webhook. The expectation is that the types defined here are stable enough to ship in `v1alpha1`.
+| Layer | What | How |
+|---|---|---|
+| Harness seam regression | default `claude-code` adapter produces a pod spec byte-identical to today's | golden-ish unit test comparing built PodSpec before/after the refactor |
+| Output routing | artifact verification, routing copy, downstream spawn, missing-file error | unit (fake client) + envtest (real spawn ordering) |
+| Pipeline | stage transitions, `parallel`/`merge` semantics, CEL mutual-exclusivity with `dependsOn` | unit for transition logic; envtest for a 4-stage sample; apply-time test for the CEL rule |
+| Schedule | cron parsing, due-window detection, idempotent run naming, `historyLimit` GC | unit + envtest (fake clock) |
+| Trigger | HMAC validation, payload ConfigMap injection, `concurrencyPolicy` | unit (httptest) for the server; envtest for run creation |
+| Delivery | each target type; failure-doesn't-fail-team | unit per `internal/delivery/*` with mock endpoints |
+| OCI skills | pull → mount, ConfigMap fallback, digest cache | unit for resolution; e2e (real `oras` pull from ghcr) |
+| Migration | no `kagents.dev` / old module path remains; CRDs install under new group | grep gate in CI + envtest install smoke |
 
----
+New CRDs (`AgentTeamSchedule`, `AgentTeamTrigger`) each get their own envtest integration suite mirroring the existing `agentteamrun_integration_test.go` pattern.
 
-## Testing Strategy
+## II.11 Open questions for review
 
-| Feature | Unit Tests | Integration Tests | Acceptance Tests |
-|---------|-----------|-------------------|------------------|
-| Output routing | Artifact copy logic, input satisfaction checks | Reconciler creates artifacts in status | Two-pod pipeline on Kind: researcher -> writer |
-| Pipeline stages | Stage transition logic, cycle detection, validation | Reconciler deploys stages in order | 3-stage pipeline with fan-out/merge on Kind |
-| AgentTeamSchedule | Cron parsing, idempotency, GC | Schedule reconciler creates runs | Schedule fires and produces a completed run |
-| Result delivery | Each delivery type with mock targets | Dispatcher dispatches to correct type | Webhook delivery to httpbin on Kind |
-| OCI skills | Init container spec generation | Skill mount path correctness | Pull from ghcr.io and verify in pod |
-
-All new reconciler logic should have >80% unit test coverage. Integration tests use envtest. Acceptance tests run on Kind with the single-node RWO fallback.
-
----
-
-## Related Documents
-
-- [Product Vision](./product-vision.md)
-- [Knowledge Work PRD](./knowledge-work-prd.md)
-- [ARCHITECTURE.md](../ARCHITECTURE.md)
-- [TESTING.md](../TESTING.md)
+1. **Renumber?** Confirm rebrand = v0.8.0 and Knowledge Work → v0.9.0, or keep numbers and rely on sequencing.
+2. **Trigger server topology** — separate `kagents-trigger` Deployment (proposed) vs. folding into the manager. I argue separate (public ingress surface). Agree?
+3. **OCI registry org** — `ghcr.io/<org>/kagents-skills/*`; which org/namespace is canonical for first-party skills?
+4. **Delivery scope for the first cut** — issue lists Slack/email/Drive/webhook. Proposed order ships webhook + Slack first; email/Drive can trail. OK to land delivery incrementally rather than all four at once?
+5. **Schedule/Trigger → Run vs Team** — both produce `AgentTeamRun` (template-based) in this design. If a schedule/trigger should ever run a template-less inline team, that's a second path; proposed to *not* support that initially (always go through a template).

@@ -115,4 +115,3 @@ func (n *Notifier) post(logger logr.Logger, body []byte) {
 		logger.Error(fmt.Errorf("status %d", resp.StatusCode), "webhook returned non-2xx")
 	}
 }
-

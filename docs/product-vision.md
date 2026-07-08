@@ -1,99 +1,121 @@
-# Product Vision: Knowledge Work Orchestrator
+# Product Vision — kagents
 
-**Document owner:** Alan Chester
-**Last updated:** 2026-05-12
-**Status:** Draft
-**Linear milestone:** v0.8.0 — Knowledge Work Orchestrator
+> **Status:** Draft for review
+> **Audience:** maintainers, contributors, and anyone evaluating the project's direction
+> **Companion docs:** [Product Requirements](knowledge-work-prd.md) · [Technical Design](knowledge-work-design.md)
 
----
+## The one-liner
 
-## The Problem
+**Gas Town runs your coding agents. kagents runs your business.**
 
-Knowledge work in organizations is manual, unscalable, and unrepeatable. Teams spend hours every week on recurring tasks that follow predictable patterns: compiling reports from multiple data sources, drafting follow-up communications after meetings, analyzing competitive landscapes, onboarding new clients with standard document packages, and summarizing research across departments.
+kagents is a Kubernetes operator for orchestrating teams of AI agents that do **knowledge work** — research, analysis, reporting, document production, operational runbooks — declaratively, on a schedule or an event, with the budget controls, RBAC, observability, and delivery integrations you'd expect from any production workload on Kubernetes.
 
-These tasks share three characteristics that make them candidates for AI orchestration:
+Coding is one mode. Knowledge work is the headline.
 
-1. **They decompose into parallel subtasks.** A quarterly report requires a data analyst, a writer, and a reviewer. These roles can work concurrently on different parts of the deliverable.
+## The problem
 
-2. **They follow repeatable pipelines.** The steps are the same every quarter: gather data, analyze trends, write narrative, review, distribute. The content changes but the workflow does not.
+Most valuable knowledge work inside a company is still done the same way it was twenty years ago: a person opens a blank document, gathers inputs by hand, thinks, writes, and sends the result to someone else. AI agents can now do large parts of this — but the way we *run* them hasn't caught up with the way we run everything else.
 
-3. **They require human judgment at specific gates.** Not everything should be autonomous. Sending external emails, publishing reports, and making financial projections all benefit from a human checkpoint before execution.
+Today, agent-driven knowledge work is:
 
-Today, the options for orchestrating these tasks with AI are either purely local (Claude Code, ChatGPT) or framework-heavy (LangGraph, CrewAI) with no native deployment model. There is no Kubernetes-native platform that lets you define a knowledge work team declaratively and run it on your cluster with built-in cost controls, observability, and human-in-the-loop gates.
+- **Manual.** A human is in the driver's seat for every step — kicking off the agent, feeding it context, copying the output somewhere useful.
+- **Unscalable.** Throughput is bounded by human attention. You can't run the same analysis across 50 inputs without 50 sessions babysat by a person.
+- **Unrepeatable.** "Run the competitive analysis again next month" means starting from scratch, with no guarantee the method — or the cost — is the same.
+- **Ephemeral and ungoverned.** Agents run on laptops. There's no audit trail, no cost accounting, no access boundaries, no scheduling, no automatic delivery of the result to where humans actually consume it.
 
-## The Vision
+The agents are ready. The *operational substrate* for running them as durable, repeatable, governed business processes is missing.
 
-**claude-teams-operator is a Kubernetes-native platform for orchestrating AI knowledge work teams.** You define what your teams do. The cluster runs them, tracks costs, keeps humans in the loop, and delivers results automatically.
+## The vision
 
-The operator treats AI agent teams the way Kubernetes treats applications: as declarative resources with well-defined lifecycle, health monitoring, and scaling characteristics. An `AgentTeam` is a first-class Kubernetes resource, just like a Deployment or a CronJob.
+**Declarative AI team orchestration on Kubernetes.**
 
-## Positioning
+You describe — as a Kubernetes resource — a team of agents and the work you want done. The platform runs it: on demand, on a cron schedule, or in response to an event. It enforces budget caps, scopes each agent's access with RBAC, emits metrics and traces, gates risky steps on human approval, and delivers the finished artifact to Slack, email, or Drive without anyone copy-pasting.
 
-Gas Town orchestrates coding agents. We orchestrate knowledge work.
+The same control-plane primitives that made Kubernetes the standard for running cloud software — declarative desired state, reconciliation loops, RBAC, scheduling, observability, garbage collection — become the control plane for AI knowledge work. Not bolted on. Native.
 
-Gas Town's question: "How do I run 50 coding agents against my codebase?"
+A weekly market-analysis report becomes a `AgentTeamSchedule`. An incident postmortem draft becomes an `AgentTeamTrigger` fired by a PagerDuty webhook. A multi-stage research-to-publication workflow becomes a `pipeline` with explicit fan-out and merge. The output shows up in the right Slack channel every Monday at 8am, costs are capped and tracked, and a human signs off before anything leaves the building.
 
-Our question: "How do I define a team of AI specialists that produces a quarterly report every Monday at 6am, with human approval before the email goes out?"
+## Why Kubernetes, why us, why now
 
-The one-liner: **"Gas Town runs your coding agents. We run your business."**
+Multi-agent frameworks mostly treat infrastructure as an afterthought — they're Python libraries you wrap in your own glue and run wherever. kagents inverts that: the orchestration *is* the cluster. That buys things you otherwise have to rebuild badly:
 
-## Target Users
+- **Declarative desired state + reconciliation** — the work is a resource; the operator drives reality toward it and recovers from failure.
+- **RBAC and ServiceAccounts** — each agent pod gets exactly the access it needs and nothing more, enforced by the cluster, not by hope.
+- **Scheduling** — `CronJob`-grade recurring runs and event triggers are first-class, not a wrapper script.
+- **Observability** — Prometheus metrics, structured events, and per-run cost tracking ride the same rails as the rest of your platform.
+- **Multi-tenancy and isolation** — namespaces, quotas, and network policy already exist; we use them.
 
-**Platform engineers** who need to deploy and manage AI agent workloads alongside existing Kubernetes infrastructure. They care about CRDs, Helm charts, RBAC, Prometheus metrics, and resource limits.
+And it builds on a protocol-fidelity bet that's already paying off: kagents wraps Anthropic's *native* Claude Code / Cowork agent-team protocol (file-based mailboxes + shared task list on a shared volume) rather than reinventing coordination. When the upstream protocol improves, we inherit it.
 
-**Operations teams** who define and run recurring business processes. They care about scheduling, approval workflows, delivery targets, and cost visibility.
+## Target users
 
-**Knowledge workers** (via platform team enablement) who consume AI-generated deliverables: reports, summaries, analyses, drafted communications. They interact through approval gates and output delivery, not kubectl.
+| Persona | What they want | What kagents gives them |
+|---------|----------------|--------------------------|
+| **Platform / DevOps engineer** | A safe, multi-tenant way to let teams run AI workloads on shared infra | An operator with RBAC, budget caps, quotas, and observability already wired into their existing cluster |
+| **Ops / SRE team** | Automation that reacts to events and runs on schedules | `AgentTeamTrigger` (webhook-driven) and `AgentTeamSchedule` (cron) with delivery to their existing channels |
+| **Knowledge worker / analyst** | "Give me the report" without operating anything | A declarative team spec (often from a reusable `AgentTeamTemplate`) that produces and delivers an artifact |
 
-## Product Principles
+The platform engineer installs and governs it. The knowledge worker consumes it. That split is the point — knowledge work becomes a *platform capability*, not a per-person craft.
 
-1. **Cloud-native first.** Every capability is expressed through Kubernetes primitives. Teams are CRDs. Communication is shared PVCs. Scheduling is CronJob-patterned. Observability is Prometheus. No sidecar frameworks, no external databases required for basic operation.
+## Positioning and competitive landscape
 
-2. **Human-in-the-loop by design.** Approval gates are first-class. The default posture is that consequential actions (sending emails, publishing documents, making external API calls) require human approval. Autonomous execution is opt-in, not opt-out.
+> The space is moving fast; treat the specifics below as a snapshot to verify, not gospel. The *category distinctions* are the durable part.
 
-3. **Observable and auditable.** Every team run is a Kubernetes resource with full status, events, logs, and cost tracking. Platform teams can see exactly what their AI teams are doing, what they cost, and what they produced.
+- **Gas Town / gastown-operator** — multi-agent **coding** orchestration, with a Kubernetes operator that treats individual agents as pods. Invents its own coordination protocol (Convoys, Beads, Molecules). Sweet spot: many independent coding tasks, batch-dispatched. kagents differs by (a) generalizing beyond coding to all knowledge work and (b) wrapping the *native* agent protocol rather than a bespoke one.
+- **Anthropic Cowork** — the native knowledge-work experience for Claude agent teams (documents, reports, research), run locally. This is precisely the experience kagents lifts onto Kubernetes and makes schedulable, governed, and multi-tenant. We are complementary, not competitive: Cowork is the protocol; we're the production substrate.
+- **CrewAI / LangGraph / AutoGen** — Python frameworks for multi-agent orchestration. Powerful, but library-shaped: you write code, manage your own runtime, and bring your own scheduling, RBAC, cost control, and delivery. kagents is declarative and cloud-native — the unit of work is a YAML resource, not a Python program.
+- **Multiclaude and similar** — multi-agent Claude orchestrators in the local/CLI tradition. Same lineage as the native protocol; kagents is the Kubernetes-native operator form. *(Verify current capabilities before citing specifics publicly.)*
 
-4. **Composable.** Templates let you define team patterns once and instantiate them against different contexts. Pipelines compose stages. Skills are pluggable. MCP servers connect to external tools. The system is designed to be assembled, not prescribed.
+The one-line wedge: **everyone else either runs coding agents, or runs agents as a library you operate yourself. kagents runs knowledge-work agent teams the way Kubernetes runs everything else — declaratively, on a schedule, governed, and delivered.**
 
-5. **Coding is a supported mode, not the only mode.** The operator's heritage is Claude Code Agent Teams. Coding workflows (git worktrees, PR creation, test validation) remain fully supported. But the primary positioning is knowledge work.
+## Long-term direction: agnostic to the agent harness
 
-## Competitive Landscape
+Today kagents runs Claude Code / Cowork agent teams, and the implementation wraps that native protocol faithfully. That's the right bet *now* — it's the most capable team-based knowledge-agent harness available, and protocol fidelity means we inherit its improvements for free.
 
-| Product | What it does | Gap we fill |
-|---------|-------------|-------------|
-| Gas Town + Operator | Coding agent swarms on K8s | No knowledge work mode, no pipelines, no scheduling, no delivery |
-| Claude Code Agent Teams | Local multi-agent coding | Single machine only, no K8s, no scheduling, no Cowork mode |
-| Claude Cowork | Desktop knowledge work | Single user, no K8s, no scheduling, no team coordination |
-| CrewAI | Role-based agent framework | No K8s-native deployment, no CRDs, no built-in scheduling |
-| LangGraph | Graph-based agent workflows | Framework, not platform. No K8s operator, no built-in lifecycle |
-| Multiclaude | Multi-agent coding orchestrator | Local only, coding-focused, no knowledge work features |
+But the durable value of kagents is **not** "a way to run Claude on Kubernetes." It's the **declarative control plane for knowledge-work agent teams** — the resources, scheduling, triggers, RBAC, budget control, observability, and delivery — which are defined independently of any one agent runtime. The Claude Code protocol lives behind an *adapter boundary*. Long term, a different team-based agent harness should be able to plug in behind the same `AgentTeam` / pipeline / schedule / trigger / delivery API, and a platform team's investment in templates, pipelines, and paved roads carries over unchanged.
 
-## Use Cases
+Concretely, the design should keep the harness-specific surface (how an agent pod is launched, how the mailbox/task protocol is mounted, what image runs) isolated from the orchestration surface (what a team *is*, when it runs, who can run it, where its output goes). We are not building that pluggability in v0.8.0 — but we should not make decisions that foreclose it. When in doubt, push harness-specific assumptions down into the runner/adapter layer rather than up into the CRD API.
 
-**Recurring reports:** A weekly standup summary team runs every Monday morning. It reads Slack channels, synthesizes highlights, and delivers a summary to the team lead via email.
+> Positioning consequence: kagents is ultimately **agnostic to the type of knowledge-agent-team harness**. Claude Code is the first (and, today, only) supported harness — not a permanent dependency.
 
-**Event-triggered workflows:** When a new deal closes in the CRM, a webhook triggers an onboarding team that generates a welcome packet, drafts introductory emails, and prepares a project kickoff document.
+## Product principles
 
-**Multi-stage analysis:** A competitive intelligence pipeline fans out three analysts (market, financial, competitive) in parallel, then merges their findings into a synthesis report with executive summary.
+1. **Cloud-native first.** If Kubernetes already solves it (scheduling, RBAC, GC, observability), we use the primitive rather than reinvent it.
+2. **Protocol fidelity today, harness-agnostic tomorrow.** We currently wrap the native Claude Code / Cowork agent-team protocol exactly — no translation layer to drift out of sync. But that protocol is an *adapter*, not the foundation: the operator's resources (teams, pipelines, schedules, triggers, delivery) are defined independently of any single agent runtime, so a different team-based knowledge-agent harness can plug in behind the same Kubernetes API. See [Long-term direction](#long-term-direction-agnostic-to-the-agent-harness).
+3. **Human-in-the-loop by design.** Approval gates, budget caps, and delivery review are first-class — autonomy is opt-in, not assumed.
+4. **Observable by default.** Every run has metrics, events, cost accounting, and a pipeline-aware status. If you can't see it, we didn't ship it.
+5. **Composable.** Templates, pipelines, schedules, triggers, and delivery targets are independent primitives that combine. Small surfaces, declared together.
+6. **Backward compatible.** Existing `AgentTeam` CRs keep working unchanged. Knowledge-work features are additive.
 
-**Document pipelines:** A research team gathers data, a writer produces a draft, a reviewer provides feedback, and a final version is delivered to Google Drive with a Slack notification.
+## Flagship use cases
 
-## Success Metrics
+1. **Recurring reports.** "Every Monday 8am, a 3-agent team pulls last week's metrics, writes a narrative summary, and posts it to `#leadership`." → `AgentTeamSchedule` + `pipeline` + `onComplete: deliver` (Slack).
+2. **Event-triggered workflows.** "When an incident closes, draft a postmortem from the timeline and open it for review." → `AgentTeamTrigger` (webhook) + delivery to a doc + approval gate.
+3. **Multi-stage analysis.** "Research → three parallel analyst takes (market, financial, competitive) → synthesis → exec summary." → `pipeline` with fan-out and merge, structured artifact handoff between stages.
+4. **Document pipelines.** "Draft → review → revise → publish," with each stage's output becoming the next stage's input automatically. → `pipeline` + output routing + delivery.
 
-- Number of AgentTeam runs per week (adoption)
-- Artifacts delivered successfully (reliability)
-- Cost per artifact (efficiency)
-- Mean time from team start to delivery (speed)
-- Approval gate response time (human-in-the-loop friction)
-- Template reuse rate (composability)
+Each of these is a declarative resource a platform team can offer as a paved road, and a knowledge worker can invoke from a template.
 
-## Roadmap Context
+## What success looks like
 
-This vision is implemented primarily in the **v0.8.0 milestone** (target: 2026-08-15), building on the foundation of v0.1.0 through v0.7.0 which established the core operator, Cowork mode, Skills, MCP servers, approval gates, the dashboard, and the documentation site. The v1.0.0 milestone (KubeCon Demo Polish) follows with production hardening and the conference presentation.
+We'll know the pivot is working when these move:
 
-## Related Documents
+- **Teams running** — count of `AgentTeam` / scheduled / triggered runs over time (adoption).
+- **Artifacts delivered** — completed runs that produced and delivered a result a human used (outcome, not just activity).
+- **Cost per artifact** — estimated spend per delivered artifact, trending down as templates and pipelines mature (efficiency).
+- **Time-to-artifact** — wall-clock from trigger to delivered result (responsiveness).
+- **Human-approval rate** — fraction of gated steps approved without edits (trust in autonomy, watched over time).
 
-- [Knowledge Work PRD](./knowledge-work-prd.md) — detailed requirements
-- [Knowledge Work Design](./knowledge-work-design.md) — technical architecture
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — current operator architecture
-- [KUBECON.md](../KUBECON.md) — conference talk framing
+Vanity metric to avoid: raw token spend or pod-hours with no artifact attached. Activity isn't the goal; *delivered, trusted knowledge work* is.
+
+## Scope and non-goals
+
+- **Not a general workflow engine.** Argo Workflows and Temporal orchestrate arbitrary containerized DAGs. kagents orchestrates *AI agent teams* specifically, with the agent protocol and human-in-the-loop semantics baked in. If you want a generic DAG runner, use one.
+- **Not a model or an agent.** We don't ship the intelligence; we run Claude Code / Cowork agent teams. Our value is the operational substrate.
+- **Not a replacement for human judgment.** Approval gates and delivery review are load-bearing. The product makes humans faster and processes repeatable; it doesn't remove the human from consequential decisions.
+
+## Relationship to the existing roadmap
+
+kagents didn't start here — it's earned the right to this pivot. v0.1–v0.7 delivered the operator core, crash resilience and per-agent RBAC, the template/run controllers, the dashboard, and a full documentation site. Knowledge-work mode (Cowork) already exists as a runtime path. **v0.8.0 is where knowledge work stops being a secondary mode and becomes the headline** — adding pipelines, scheduling, event triggers, structured artifact handoff, result delivery, and OCI-distributed skills, plus a positioning reframe that leads with Cowork.
+
+See the [PRD](knowledge-work-prd.md) for the feature-by-feature requirements and the [Technical Design](knowledge-work-design.md) for how it's built.

@@ -17,9 +17,9 @@ func TestParseRepo_HTTPS(t *testing.T) {
 	cases := []struct {
 		url, owner, repo string
 	}{
-		{"https://github.com/amcheste/claude-teams-operator", "amcheste", "claude-teams-operator"},
-		{"https://github.com/amcheste/claude-teams-operator.git", "amcheste", "claude-teams-operator"},
-		{"https://github.com/amcheste/claude-teams-operator/", "amcheste", "claude-teams-operator"},
+		{"https://github.com/amcheste/kagents", "amcheste", "kagents"},
+		{"https://github.com/amcheste/kagents.git", "amcheste", "kagents"},
+		{"https://github.com/amcheste/kagents/", "amcheste", "kagents"},
 		{"http://ghe.internal/team/project.git", "team", "project"},
 	}
 	for _, c := range cases {
@@ -34,8 +34,8 @@ func TestParseRepo_SSH(t *testing.T) {
 	cases := []struct {
 		url, owner, repo string
 	}{
-		{"git@github.com:amcheste/claude-teams-operator.git", "amcheste", "claude-teams-operator"},
-		{"git@github.com:amcheste/claude-teams-operator", "amcheste", "claude-teams-operator"},
+		{"git@github.com:amcheste/kagents.git", "amcheste", "kagents"},
+		{"git@github.com:amcheste/kagents", "amcheste", "kagents"},
 	}
 	for _, c := range cases {
 		owner, repo, err := ParseRepo(c.url)

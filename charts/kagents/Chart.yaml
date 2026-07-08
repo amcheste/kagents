@@ -1,0 +1,18 @@
+apiVersion: v2
+name: kagents
+description: A Kubernetes operator for running Claude Code Agent Teams as distributed pods
+type: application
+version: 0.8.0
+appVersion: "0.8.0"
+keywords:
+  - claude
+  - ai
+  - agent
+  - kubernetes
+  - operator
+home: https://github.com/amcheste/kagents
+sources:
+  - https://github.com/amcheste/kagents
+maintainers:
+  - name: Alan Chester
+    url: https://github.com/amcheste

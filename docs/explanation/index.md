@@ -10,6 +10,6 @@ The "why" behind kagents. Architecture, design tradeoffs, the choices that shape
 
 ## Going deeper
 
-The repo's [`ARCHITECTURE.md`](https://github.com/amcheste/claude-teams-operator/blob/main/ARCHITECTURE.md) is the design doc. Denser, more focused on rationale than on usage. It overlaps with these pages but goes further into the file-by-file structure of the codebase.
+The repo's [`ARCHITECTURE.md`](https://github.com/amcheste/kagents/blob/main/ARCHITECTURE.md) is the design doc. Denser, more focused on rationale than on usage. It overlaps with these pages but goes further into the file-by-file structure of the codebase.
 
-The [KubeCon NA 2026 talk](https://github.com/amcheste/claude-teams-operator/blob/main/KUBECON.md) frames the same architecture from the conference angle (interesting problems encountered, competitive landscape, design decisions worth surfacing on stage).
+The [KubeCon NA 2026 talk](https://github.com/amcheste/kagents/blob/main/KUBECON.md) frames the same architecture from the conference angle (interesting problems encountered, competitive landscape, design decisions worth surfacing on stage).

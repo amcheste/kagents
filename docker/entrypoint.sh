@@ -3,7 +3,7 @@ set -euo pipefail
 
 # entrypoint.sh — Starts Claude Code as a team lead or teammate inside a K8s pod.
 
-echo "[claude-teams-operator] Starting Claude Code agent"
+echo "[kagents] Starting Claude Code agent"
 echo "  Team:    ${CLAUDE_CODE_TEAM_NAME:-unset}"
 echo "  Agent:   ${CLAUDE_CODE_AGENT_NAME:-unset}"
 echo "  Model:   ${CLAUDE_MODEL:-sonnet}"
@@ -40,7 +40,7 @@ if [[ -d /var/claude-skills ]]; then
         dest=~/.claude/skills/"$skill_name"
         mkdir -p "$dest"
         cp -r "$skill_dir"/. "$dest"/
-        echo "[claude-teams-operator] Installed skill: $skill_name"
+        echo "[kagents] Installed skill: $skill_name"
     done
 fi
 
@@ -49,7 +49,7 @@ fi
 # Copy it to ~/.mcp.json so Claude Code picks up the MCP server configuration.
 if [[ -f /var/claude-mcp/mcp.json ]]; then
     cp /var/claude-mcp/mcp.json ~/.mcp.json
-    echo "[claude-teams-operator] Installed MCP config"
+    echo "[kagents] Installed MCP config"
 fi
 
 # --- Resolve model flag ---
@@ -79,11 +79,11 @@ fi
 if git log --oneline -3 2>/dev/null; then
     echo ""
 else
-    echo "[claude-teams-operator] (no git repo in workspace)"
+    echo "[kagents] (no git repo in workspace)"
 fi
 
 # --- Launch Claude Code ---
-echo "[claude-teams-operator] Launching Claude Code..."
+echo "[kagents] Launching Claude Code..."
 exec claude ${MODEL_FLAG} ${PERMISSION_FLAG} \
     --print \
     -p "${AGENT_PROMPT}"

@@ -50,6 +50,39 @@ var (
 		Buckets: prometheus.ExponentialBuckets(1, 2, 10),
 	}, []string{"team", "teammate"})
 
+	// --- Knowledge-work observability (v0.8.0+) ---
+	//
+	// These metrics use the `kagents_` prefix to match the rebranded
+	// project name. Existing `claude_*` metrics above stay put for
+	// backwards compatibility — they'll get a synchronized rename in a
+	// future major; for now operators dashboard against either set.
+
+	pipelineStageActive = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "kagents_team_pipeline_stage_active",
+		Help: "1 when this pipeline stage is in the Running phase, 0 otherwise. Useful for stacking by stage to visualize where a team is in flight.",
+	}, []string{"team", "namespace", "stage"})
+
+	pipelineStageDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "kagents_team_stage_duration_seconds",
+		Help:    "Wall-clock duration from a pipeline stage's first teammate spawning to its last completing, in seconds. Observed once per (team, stage) at the Completed transition.",
+		Buckets: prometheus.ExponentialBuckets(30, 2, 10),
+	}, []string{"team", "namespace", "stage"})
+
+	teamArtifactsProduced = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "kagents_team_artifacts_produced_total",
+		Help: "Artifacts recorded on a team's status by a teammate completing its declared outputs.",
+	}, []string{"team", "namespace", "teammate"})
+
+	teamDeliverySuccess = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "kagents_team_delivery_success_total",
+		Help: "Successful deliveries dispatched when OnComplete=deliver, by target type.",
+	}, []string{"team", "namespace", "type"})
+
+	teamDeliveryFailure = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "kagents_team_delivery_failure_total",
+		Help: "Failed deliveries dispatched when OnComplete=deliver, by target type.",
+	}, []string{"team", "namespace", "type"})
+
 	collectors = []prometheus.Collector{
 		teamActive,
 		teamDuration,
@@ -59,6 +92,11 @@ var (
 		teammateRestarts,
 		teamBudgetRemaining,
 		teammateIdle,
+		pipelineStageActive,
+		pipelineStageDuration,
+		teamArtifactsProduced,
+		teamDeliverySuccess,
+		teamDeliveryFailure,
 	}
 
 	registerOnce sync.Once
@@ -139,4 +177,39 @@ func SetBudgetRemaining(team, namespace string, remaining float64) {
 // e.g. at operator startup.
 func SetActiveTeams(count int) {
 	teamActive.Set(float64(count))
+}
+
+// SetPipelineStageActive marks a stage as Running (1) or not (0). The
+// gauge is set on every reconcile so a stage that transitions
+// Running → Completed flips to 0 without needing a separate "stage
+// done" event.
+func SetPipelineStageActive(team, namespace, stage string, active bool) {
+	v := 0.0
+	if active {
+		v = 1.0
+	}
+	pipelineStageActive.WithLabelValues(team, namespace, stage).Set(v)
+}
+
+// ObservePipelineStageDuration records the wall-clock seconds a stage
+// spent in Running before transitioning to Completed. Call this once
+// per (team, stage) — the reconciler guards against re-observing.
+func ObservePipelineStageDuration(team, namespace, stage string, durationSec float64) {
+	pipelineStageDuration.WithLabelValues(team, namespace, stage).Observe(durationSec)
+}
+
+// RecordArtifactProduced increments the per-teammate artifact counter.
+// One increment per artifact appended to status.artifacts.
+func RecordArtifactProduced(team, namespace, teammate string) {
+	teamArtifactsProduced.WithLabelValues(team, namespace, teammate).Inc()
+}
+
+// RecordDeliverySuccess increments the per-type delivery success counter.
+func RecordDeliverySuccess(team, namespace, deliveryType string) {
+	teamDeliverySuccess.WithLabelValues(team, namespace, deliveryType).Inc()
+}
+
+// RecordDeliveryFailure increments the per-type delivery failure counter.
+func RecordDeliveryFailure(team, namespace, deliveryType string) {
+	teamDeliveryFailure.WithLabelValues(team, namespace, deliveryType).Inc()
 }

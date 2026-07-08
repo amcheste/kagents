@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 var _ = Describe("AgentTeam operator — acceptance", func() {
@@ -376,7 +376,7 @@ var _ = Describe("AgentTeam operator — acceptance", func() {
 			if t.Annotations == nil {
 				t.Annotations = map[string]string{}
 			}
-			t.Annotations["approved.claude.amcheste.io/spawn-gated"] = "true"
+			t.Annotations["approved.kagents.dev/spawn-gated"] = "true"
 			Expect(k8sClient.Update(ctx, &t)).To(Succeed())
 
 			// Gated teammate should now be spawned.

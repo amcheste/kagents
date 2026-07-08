@@ -177,7 +177,7 @@ func TestEnsureAgentPod_SetsServiceAccountName(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil))
 
 	var pod corev1.Pod
 	require.NoError(t, r.Get(ctx, types.NamespacedName{Name: "sa-pod-worker", Namespace: "default"}, &pod))
@@ -195,8 +195,8 @@ func TestEnsureAgentPod_CreatesDistinctSAPerAgent(t *testing.T) {
 	team = fetch(t, r, "distinct-sa")
 	ctx := context.Background()
 
-	require.NoError(t, r.ensureAgentPod(ctx, team, "lead", "opus", "lead", "auto-accept", true, corev1.ResourceRequirements{}, nil, nil, nil))
-	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "work", "auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil))
+	require.NoError(t, r.ensureAgentPod(ctx, team, "lead", "opus", "lead", "auto-accept", true, corev1.ResourceRequirements{}, nil, nil, nil, nil))
+	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "work", "auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil))
 
 	var sa1, sa2 corev1.ServiceAccount
 	require.NoError(t, r.Get(ctx, types.NamespacedName{Name: "distinct-sa-lead", Namespace: "default"}, &sa1))

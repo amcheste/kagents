@@ -47,11 +47,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - claude.amcheste.io
+  - kagents.dev
   resources:
   - agentteamruns
   - agentteams
+  - agentteamschedules
   - agentteamtemplates
+  - agentteamtriggers
   verbs:
   - create
   - delete
@@ -61,19 +63,23 @@ rules:
   - update
   - watch
 - apiGroups:
-  - claude.amcheste.io
+  - kagents.dev
   resources:
   - agentteamruns/finalizers
   - agentteams/finalizers
+  - agentteamschedules/finalizers
   - agentteamtemplates/finalizers
+  - agentteamtriggers/finalizers
   verbs:
   - update
 - apiGroups:
-  - claude.amcheste.io
+  - kagents.dev
   resources:
   - agentteamruns/status
   - agentteams/status
+  - agentteamschedules/status
   - agentteamtemplates/status
+  - agentteamtriggers/status
   verbs:
   - get
   - patch

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 // AgentTeamRunReconciler turns an AgentTeamRun into a running AgentTeam by
@@ -38,9 +38,9 @@ const runConditionTeamCreated = "TeamCreated"
 // actually broken.
 const runRequeueWaitingForTemplate = 15 * time.Second
 
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteamruns,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteamruns/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteamruns/finalizers,verbs=update
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteamruns,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteamruns/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteamruns/finalizers,verbs=update
 
 func (r *AgentTeamRunReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)

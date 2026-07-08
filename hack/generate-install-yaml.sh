@@ -46,7 +46,7 @@ done
 # :latest, which would drift from the release). awk keeps this portable across
 # GNU/BSD sed differences — this script runs in both Ubuntu CI and local dev.
 awk -v tag="${TAG}" '
-  /ghcr.io\/amcheste\/claude-teams-operator:latest/ {
+  /ghcr.io\/amcheste\/kagents:latest/ {
     sub(/:latest/, ":" tag)
   }
   /- --metrics-bind-address=:8080/ {

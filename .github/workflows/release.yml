@@ -43,13 +43,13 @@ jobs:
       packages: write
       id-token: write  # for Sigstore OIDC keyless signing
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -57,9 +57,9 @@ jobs:
 
       - name: Extract Docker metadata (operator)
         id: meta-operator
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6
         with:
-          images: ghcr.io/amcheste/claude-teams-operator
+          images: ghcr.io/amcheste/kagents
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -68,7 +68,7 @@ jobs:
 
       - name: Build and push operator image
         id: build-operator
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           file: docker/Dockerfile.operator
@@ -82,7 +82,7 @@ jobs:
 
       - name: Extract Docker metadata (runner)
         id: meta-runner
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6
         with:
           images: ghcr.io/amcheste/claude-code-runner
           tags: |
@@ -93,7 +93,7 @@ jobs:
 
       - name: Build and push runner image
         id: build-runner
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           file: docker/Dockerfile.claude-code
@@ -106,12 +106,12 @@ jobs:
           sbom: true
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v3
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v3
 
       - name: Sign operator image with Sigstore keyless
         run: |
           cosign sign --yes \
-            ghcr.io/amcheste/claude-teams-operator@${{ steps.build-operator.outputs.digest }}
+            ghcr.io/amcheste/kagents@${{ steps.build-operator.outputs.digest }}
 
       - name: Sign runner image with Sigstore keyless
         run: |
@@ -127,10 +127,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install Helm
-        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v3.16.2
 
@@ -141,7 +141,7 @@ jobs:
           # values.yaml ships tag: latest for both operator and runner. At
           # release time we pin both to the release tag so `helm install
           # --version=vX.Y.Z` pulls matching images by default.
-          sed -i "s|tag: latest|tag: ${TAG}|g" charts/claude-teams-operator/values.yaml
+          sed -i "s|tag: latest|tag: ${TAG}|g" charts/kagents/values.yaml
 
       - name: Log in to GitHub Container Registry
         run: |
@@ -154,10 +154,10 @@ jobs:
         run: |
           # Helm chart versions must be SemVer without a leading 'v'.
           VERSION_NUM="${TAG#v}"
-          helm package charts/claude-teams-operator \
+          helm package charts/kagents \
             --version "${VERSION_NUM}" \
             --app-version "${VERSION_NUM}"
-          helm push "claude-teams-operator-${VERSION_NUM}.tgz" \
+          helm push "kagents-${VERSION_NUM}.tgz" \
             oci://ghcr.io/amcheste/charts
 
   # ── Create GitHub Release ─────────────────────────────────────────────────
@@ -168,7 +168,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
@@ -192,7 +192,7 @@ jobs:
         run: bash hack/generate-install-yaml.sh > install.yaml
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v2
         with:
           prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
           generate_release_notes: true
@@ -202,29 +202,29 @@ jobs:
 
             ```bash
             # Helm (recommended)
-            helm install claude-teams-operator oci://ghcr.io/amcheste/charts/claude-teams-operator \
+            helm install kagents oci://ghcr.io/amcheste/charts/kagents \
               --version ${{ steps.prerelease.outputs.version_num }}
 
             # Raw manifests
-            kubectl apply -f https://github.com/amcheste/claude-teams-operator/releases/download/${{ github.ref_name }}/install.yaml
+            kubectl apply -f https://github.com/amcheste/kagents/releases/download/${{ github.ref_name }}/install.yaml
             ```
 
             ## Container Images
 
             ```
-            ghcr.io/amcheste/claude-teams-operator:${{ github.ref_name }}
+            ghcr.io/amcheste/kagents:${{ github.ref_name }}
             ghcr.io/amcheste/claude-code-runner:${{ github.ref_name }}
             ```
 
             Images are signed with [Sigstore Cosign](https://docs.sigstore.dev/) (keyless). Verify with:
             ```bash
-            cosign verify ghcr.io/amcheste/claude-teams-operator:${{ github.ref_name }} \
-              --certificate-identity-regexp="https://github.com/amcheste/claude-teams-operator" \
+            cosign verify ghcr.io/amcheste/kagents:${{ github.ref_name }} \
+              --certificate-identity-regexp="https://github.com/amcheste/kagents" \
               --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
 
             cosign verify ghcr.io/amcheste/claude-code-runner:${{ github.ref_name }} \
-              --certificate-identity-regexp="https://github.com/amcheste/claude-teams-operator" \
+              --certificate-identity-regexp="https://github.com/amcheste/kagents" \
               --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
             ```
 
-            See [CHANGELOG](https://github.com/amcheste/claude-teams-operator/blob/main/CHANGELOG.md) for full details.
+            See [CHANGELOG](https://github.com/amcheste/kagents/blob/main/CHANGELOG.md) for full details.

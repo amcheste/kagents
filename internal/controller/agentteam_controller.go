@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -23,16 +24,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
-	"github.com/amcheste/claude-teams-operator/internal/budget"
-	"github.com/amcheste/claude-teams-operator/internal/github"
-	"github.com/amcheste/claude-teams-operator/internal/metrics"
-	"github.com/amcheste/claude-teams-operator/internal/webhook"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
+	"github.com/amcheste/kagents/internal/budget"
+	"github.com/amcheste/kagents/internal/delivery"
+	"github.com/amcheste/kagents/internal/github"
+	"github.com/amcheste/kagents/internal/harness"
+	"github.com/amcheste/kagents/internal/metrics"
+	"github.com/amcheste/kagents/internal/webhook"
 )
 
 const (
-	defaultAgentImage = "ghcr.io/amcheste/claude-code-runner:latest"
-	defaultInitImage  = "alpine/git:latest"
+	defaultInitImage = "alpine/git:latest"
+
+	// defaultSkillPullerImage is the OCI artifact puller used to
+	// materialize skills declared with SkillSource.OCI. ORAS speaks
+	// the OCI distribution spec directly and supports artifacts that
+	// aren't container images, which is what skills are.
+	defaultSkillPullerImage = "ghcr.io/oras-project/oras:v1.2.0"
 )
 
 // AgentTeamReconciler reconciles an AgentTeam object.
@@ -46,6 +54,12 @@ type AgentTeamReconciler struct {
 
 	// InitImage overrides the default alpine/git image used for the repo init Job.
 	InitImage string
+
+	// SkillPullerImage overrides the default ORAS image used to pull
+	// OCI-distributed skills into agent pods. Tests can swap in a
+	// no-op image; air-gapped clusters can pin to an internally
+	// mirrored ORAS build.
+	SkillPullerImage string
 
 	// SkipInitScript replaces the init Job's git-clone script with a no-op (exit 0).
 	// Used in acceptance tests where no real git repository is available.
@@ -73,6 +87,49 @@ type AgentTeamReconciler struct {
 	// recordEvent helper tolerates a nil recorder so unit tests that construct
 	// a reconciler directly are not forced to wire one up.
 	Recorder record.EventRecorder
+
+	// Harnesses is the registry of supported agent runtimes, keyed by
+	// spec.harness value. Populated by main.go from harness.DefaultRegistry().
+	// Unit tests that construct a reconciler directly may leave this nil;
+	// harnessFor falls back to a built-in claude-code adapter in that case.
+	Harnesses map[string]harness.Harness
+
+	// Delivery dispatches DeliveryTarget instances when OnComplete=deliver.
+	// Tests inject a Dispatcher with stub senders; production wires
+	// delivery.NewDispatcher() in cmd/manager. May be nil — a default
+	// production dispatcher is constructed on demand.
+	Delivery *delivery.Dispatcher
+}
+
+// deliveryDispatcher returns the configured Delivery dispatcher or a
+// freshly-built default. Centralizing the fallback keeps unit tests that
+// don't populate Delivery working and gives misconfigured reconcilers a
+// safe default rather than a nil-deref.
+func (r *AgentTeamReconciler) deliveryDispatcher() *delivery.Dispatcher {
+	if r.Delivery != nil {
+		return r.Delivery
+	}
+	return delivery.NewDispatcher()
+}
+
+// harnessFor returns the [harness.Harness] adapter that should drive the
+// given team. Selection: team.Spec.Harness (defaulting to claude-code if
+// unset) is looked up in r.Harnesses; if the registry is nil or the named
+// harness isn't registered, the built-in claude-code adapter is returned.
+// Centralizing the fallback here keeps unit tests that don't populate
+// Harnesses working and gives misconfigured CRs a safe default rather than
+// a panic.
+func (r *AgentTeamReconciler) harnessFor(team *claudev1alpha1.AgentTeam) harness.Harness {
+	name := team.Spec.Harness
+	if name == "" {
+		name = harness.DefaultHarness
+	}
+	if r.Harnesses != nil {
+		if h, ok := r.Harnesses[name]; ok {
+			return h
+		}
+	}
+	return harness.ClaudeCode{}
 }
 
 // recordEvent emits an Event against the AgentTeam if a Recorder is configured.
@@ -95,7 +152,10 @@ func (r *AgentTeamReconciler) agentImage() string {
 	if r.AgentImage != "" {
 		return r.AgentImage
 	}
-	return defaultAgentImage
+	// The default runner image comes from the harness adapter rather than a
+	// hardcoded operator constant. With claude-code as the only registered
+	// harness today, this evaluates to the same image as the old constant.
+	return harness.ClaudeCode{}.DefaultImage()
 }
 
 func (r *AgentTeamReconciler) initImage() string {
@@ -105,9 +165,16 @@ func (r *AgentTeamReconciler) initImage() string {
 	return defaultInitImage
 }
 
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteams,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteams/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteams/finalizers,verbs=update
+func (r *AgentTeamReconciler) skillPullerImage() string {
+	if r.SkillPullerImage != "" {
+		return r.SkillPullerImage
+	}
+	return defaultSkillPullerImage
+}
+
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteams,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteams/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteams/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -236,13 +303,20 @@ func (r *AgentTeamReconciler) reconcileInitializing(ctx context.Context, team *c
 	// Deploy the lead pod.
 	if err := r.ensureAgentPod(ctx, team, "lead", team.Spec.Lead.Model, team.Spec.Lead.Prompt,
 		team.Spec.Lead.PermissionMode, true, team.Spec.Lead.Resources, nil,
-		team.Spec.Lead.Skills, team.Spec.Lead.MCPServers); err != nil {
+		team.Spec.Lead.Skills, team.Spec.Lead.MCPServers, nil); err != nil {
 		return ctrl.Result{}, fmt.Errorf("ensuring lead pod: %w", err)
 	}
 
 	// Deploy teammates whose dependencies are already met (or have none).
+	// Inputs[].From implicitly extends DependsOn so consumers wait for producers.
+	// Pipeline mode additionally gates the entire stage on
+	// approved.kagents.dev/stage-{name} when ApprovalRequired is set.
 	for _, tm := range team.Spec.Teammates {
-		if !r.dependenciesMet(ctx, team, tm.DependsOn) {
+		if !r.dependenciesMet(ctx, team, effectiveDependencies(team, tm)) {
+			continue
+		}
+		if stage, ok := stageForTeammate(team, tm.Name); ok && !stageApprovalGranted(team, stage) {
+			r.setTeammatePendingApproval(team, tm.Name, "stage-"+stage.Name)
 			continue
 		}
 		if !r.checkApprovalGate(ctx, team, "spawn-"+tm.Name) {
@@ -251,7 +325,7 @@ func (r *AgentTeamReconciler) reconcileInitializing(ctx context.Context, team *c
 		}
 		if err := r.ensureAgentPod(ctx, team, tm.Name, tm.Model, tm.Prompt,
 			"auto-accept", false, tm.Resources, tm.Scope,
-			tm.Skills, tm.MCPServers); err != nil {
+			tm.Skills, tm.MCPServers, tm.Inputs); err != nil {
 			return ctrl.Result{}, fmt.Errorf("ensuring teammate pod %s: %w", tm.Name, err)
 		}
 	}
@@ -302,6 +376,8 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 
 	// Sync pod statuses into team.Status.
 	r.syncPodStatuses(ctx, team)
+	// Recompute pipeline status once teammate phases are fresh.
+	r.updatePipelineStatus(team, time.Now())
 
 	// Re-spawn crashed teammates whose RestartCount is still below the limit;
 	// fail the team if any teammate has exhausted its restarts.
@@ -327,7 +403,11 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 			return ctrl.Result{}, err
 		}
 
-		if !r.dependenciesMet(ctx, team, tm.DependsOn) {
+		if !r.dependenciesMet(ctx, team, effectiveDependencies(team, tm)) {
+			continue
+		}
+		if stage, ok := stageForTeammate(team, tm.Name); ok && !stageApprovalGranted(team, stage) {
+			r.setTeammatePendingApproval(team, tm.Name, "stage-"+stage.Name)
 			continue
 		}
 		if !r.checkApprovalGate(ctx, team, "spawn-"+tm.Name) {
@@ -337,7 +417,7 @@ func (r *AgentTeamReconciler) reconcileRunning(ctx context.Context, team *claude
 		r.clearTeammatePendingApproval(team, tm.Name)
 		if err := r.ensureAgentPod(ctx, team, tm.Name, tm.Model, tm.Prompt,
 			"auto-accept", false, tm.Resources, tm.Scope,
-			tm.Skills, tm.MCPServers); err != nil {
+			tm.Skills, tm.MCPServers, tm.Inputs); err != nil {
 			return ctrl.Result{}, fmt.Errorf("spawning teammate %s: %w", tm.Name, err)
 		}
 		log.Info("Spawned teammate", "name", tm.Name)
@@ -504,7 +584,7 @@ func (r *AgentTeamReconciler) handleTeammateFailures(ctx context.Context, team *
 
 		if err := r.ensureAgentPod(ctx, team, tm.Name, tm.Model, tm.Prompt,
 			"auto-accept", false, tm.Resources, tm.Scope,
-			tm.Skills, tm.MCPServers); err != nil {
+			tm.Skills, tm.MCPServers, tm.Inputs); err != nil {
 			return "", fmt.Errorf("re-spawning teammate %s: %w", tm.Name, err)
 		}
 	}
@@ -775,7 +855,7 @@ cd /workspace/repo
 # Identity for merge commits. These are operator-generated merges; using a
 # distinct identity makes git log | grep trivially filter them.
 git config user.email "operator@claude-teams.local"
-git config user.name "claude-teams-operator"
+git config user.name "kagents"
 
 # Fresh consolidated branch rooted at the current base tip.
 git fetch origin %s
@@ -928,6 +1008,7 @@ func (r *AgentTeamReconciler) ensureAgentPod(
 	scope *claudev1alpha1.ScopeSpec,
 	skills []claudev1alpha1.SkillSpec,
 	mcpServers []claudev1alpha1.MCPServerSpec,
+	inputs []claudev1alpha1.InputSpec,
 ) error {
 	podName := agentPodName(team, agentName)
 	pod := &corev1.Pod{}
@@ -950,7 +1031,7 @@ func (r *AgentTeamReconciler) ensureAgentPod(
 		}
 	}
 
-	pod = r.buildAgentPod(team, agentName, model, prompt, permissionMode, isLead, resources, scope, skills, mcpServers)
+	pod = r.buildAgentPod(team, agentName, model, prompt, permissionMode, isLead, resources, scope, skills, mcpServers, inputs)
 	if err := ctrl.SetControllerReference(team, pod, r.Scheme); err != nil {
 		return err
 	}
@@ -1111,6 +1192,7 @@ func (r *AgentTeamReconciler) buildAgentPod(
 	scope *claudev1alpha1.ScopeSpec,
 	skills []claudev1alpha1.SkillSpec,
 	mcpServers []claudev1alpha1.MCPServerSpec,
+	inputs []claudev1alpha1.InputSpec,
 ) *corev1.Pod {
 	role := "teammate"
 	if isLead {
@@ -1118,22 +1200,22 @@ func (r *AgentTeamReconciler) buildAgentPod(
 	}
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":      "claude-teams-operator",
+		"app.kubernetes.io/name":      "kagents",
 		"app.kubernetes.io/instance":  team.Name,
 		"app.kubernetes.io/component": agentName,
-		"claude.amcheste.io/team":     team.Name,
-		"claude.amcheste.io/role":     role,
+		"kagents.dev/team":            team.Name,
+		"kagents.dev/role":            role,
 	}
 
-	envVars := []corev1.EnvVar{
-		{Name: "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", Value: "1"},
-		{Name: "CLAUDE_CODE_TEAM_NAME", Value: team.Name},
-		{Name: "CLAUDE_CODE_AGENT_NAME", Value: agentName},
-		{Name: "CLAUDE_CODE_ROLE", Value: role},
-		{Name: "CLAUDE_MODEL", Value: model},
-		{Name: "CLAUDE_PERMISSION_MODE", Value: permissionMode},
-		{Name: "AGENT_PROMPT", Value: prompt},
-	}
+	// Protocol-activation env vars come from the harness adapter; everything
+	// else (model selection, permission mode, prompt, auth, scope) is
+	// harness-neutral and contributed by the operator itself.
+	envVars := r.harnessFor(team).ProtocolEnv(harness.AgentRole(role), agentName, team)
+	envVars = append(envVars,
+		corev1.EnvVar{Name: "CLAUDE_MODEL", Value: model},
+		corev1.EnvVar{Name: "CLAUDE_PERMISSION_MODE", Value: permissionMode},
+		corev1.EnvVar{Name: "AGENT_PROMPT", Value: prompt},
+	)
 
 	// Auth: prefer API key, fall back to OAuth.
 	if team.Spec.Auth.APIKeySecret != "" {
@@ -1234,25 +1316,83 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		}
 	}
 
-	// Skills: each ConfigMap-backed skill gets mounted at /var/claude-skills/{name}/.
-	// The entrypoint copies them into ~/.claude/skills/{name}/.
+	// Skills: each skill is materialized at /var/claude-skills/{name}/;
+	// the runner entrypoint copies that directory into ~/.claude/skills/{name}/
+	// before launching Claude Code.
+	//
+	// ConfigMap source: mount directly. Cheapest path — no network, no
+	// extra container, just a projected ConfigMap volume.
+	//
+	// OCI source: an init container pulls the artifact via `oras` into
+	// a per-skill emptyDir that the main container also mounts. Pull
+	// credentials come from spec.imagePullSecrets — the first listed
+	// kubernetes.io/dockerconfigjson Secret is projected at
+	// /auth/.docker/config.json and DOCKER_CONFIG points at it, which
+	// ORAS picks up natively. Multi-registry deployments combine creds
+	// into a single dockerconfigjson; this keeps the init container's
+	// auth surface to one mount.
+	var skillInitContainers []corev1.Container
+	needSkillAuth := false
 	for _, skill := range skills {
-		if skill.Source.ConfigMap == "" {
-			continue // OCI not yet implemented.
-		}
 		volName := "skill-" + skill.Name
+		switch {
+		case skill.Source.ConfigMap != "":
+			volumes = append(volumes, corev1.Volume{
+				Name: volName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: skill.Source.ConfigMap},
+					},
+				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volName,
+				MountPath: fmt.Sprintf("/var/claude-skills/%s", skill.Name),
+				ReadOnly:  true,
+			})
+		case skill.Source.OCI != "":
+			volumes = append(volumes, corev1.Volume{
+				Name:         volName,
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volName,
+				MountPath: fmt.Sprintf("/var/claude-skills/%s", skill.Name),
+				ReadOnly:  true,
+			})
+			initMounts := []corev1.VolumeMount{
+				{Name: volName, MountPath: "/skill-out"},
+			}
+			var initEnv []corev1.EnvVar
+			if len(team.Spec.ImagePullSecrets) > 0 {
+				needSkillAuth = true
+				initMounts = append(initMounts, corev1.VolumeMount{
+					Name: "skill-auth", MountPath: "/auth/.docker", ReadOnly: true,
+				})
+				initEnv = append(initEnv, corev1.EnvVar{Name: "DOCKER_CONFIG", Value: "/auth/.docker"})
+			}
+			skillInitContainers = append(skillInitContainers, corev1.Container{
+				Name:         "pull-skill-" + skill.Name,
+				Image:        r.skillPullerImage(),
+				Command:      []string{"oras", "pull", "--output", "/skill-out", skill.Source.OCI},
+				Env:          initEnv,
+				VolumeMounts: initMounts,
+			})
+		}
+	}
+	if needSkillAuth {
+		// Project the first imagePullSecret's .dockerconfigjson into a
+		// fixed path the init containers read. Items[] is explicit so
+		// the mounted filename is always "config.json", regardless of
+		// the Secret's key name preference.
 		volumes = append(volumes, corev1.Volume{
-			Name: volName,
+			Name: "skill-auth",
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: skill.Source.ConfigMap},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: team.Spec.ImagePullSecrets[0].Name,
+					Items:      []corev1.KeyToPath{{Key: ".dockerconfigjson", Path: "config.json"}},
 				},
 			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      volName,
-			MountPath: fmt.Sprintf("/var/claude-skills/%s", skill.Name),
-			ReadOnly:  true,
 		})
 	}
 
@@ -1275,6 +1415,56 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		})
 	}
 
+	// Output routing: stage each upstream-produced artifact at this teammate's
+	// requested mountPath via a per-input init container. The same shared
+	// workspace-output PVC that the producer wrote to is mounted into the
+	// init container at the team's standard output path; the artifact is then
+	// copied to a per-input emptyDir mounted at MountPath, which the main
+	// container also mounts so the agent sees the artifact at
+	// {MountPath}/{Artifact}.
+	//
+	// Misconfigured inputs (no matching producer / no matching artifact) are
+	// skipped silently; the teammate still launches, just without that input
+	// staged. The implicit-dependency wiring in effectiveDependencies ensures
+	// the producer has already reached Succeeded before this pod is created.
+	var initContainers []corev1.Container
+	// Skill pulls run first so they're available before any input
+	// staging that might reference skill-produced configs.
+	initContainers = append(initContainers, skillInitContainers...)
+	if team.Spec.Workspace != nil && team.Spec.Workspace.Output != nil && len(inputs) > 0 {
+		outMountPath := team.Spec.Workspace.Output.MountPath
+		if outMountPath == "" {
+			outMountPath = "/workspace/output"
+		}
+		for i, in := range inputs {
+			producerPath := findProducerOutputPath(team, in.From, in.Artifact)
+			if producerPath == "" {
+				continue
+			}
+			volName := fmt.Sprintf("input-%d", i)
+			volumes = append(volumes, corev1.Volume{
+				Name:         volName,
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volName,
+				MountPath: in.MountPath,
+				ReadOnly:  true,
+			})
+			initContainers = append(initContainers, corev1.Container{
+				Name:  fmt.Sprintf("stage-input-%d", i),
+				Image: r.agentImage(),
+				Command: []string{"sh", "-c",
+					fmt.Sprintf("mkdir -p %q && cp %q %q",
+						in.MountPath, producerPath, filepath.Join(in.MountPath, in.Artifact))},
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: "workspace-output", MountPath: outMountPath, ReadOnly: true},
+					{Name: volName, MountPath: in.MountPath},
+				},
+			})
+		}
+	}
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      agentPodName(team, agentName),
@@ -1284,6 +1474,8 @@ func (r *AgentTeamReconciler) buildAgentPod(
 		Spec: corev1.PodSpec{
 			RestartPolicy:      corev1.RestartPolicyNever,
 			ServiceAccountName: agentServiceAccountName(team, agentName),
+			ImagePullSecrets:   team.Spec.ImagePullSecrets,
+			InitContainers:     initContainers,
 			Containers: []corev1.Container{
 				{
 					Name:         "claude-code",
@@ -1345,6 +1537,12 @@ func (r *AgentTeamReconciler) syncPodStatuses(ctx context.Context, team *claudev
 		case err == nil:
 			st.PodName = pod.Name
 			st.Phase = podPhaseToAgentPhase(pod)
+			// Record any declared outputs as ArtifactStatus entries the first
+			// time we observe the producer pod in Succeeded. Idempotent; safe
+			// to call on every reconcile thereafter.
+			if pod.Status.Phase == corev1.PodSucceeded {
+				recordTeammateArtifacts(team, tm, time.Now())
+			}
 		case errors.IsNotFound(err):
 			st.PodName = ""
 			st.Phase = "Waiting"
@@ -1508,8 +1706,49 @@ func (r *AgentTeamReconciler) executeOnComplete(ctx context.Context, team *claud
 		} else {
 			log.Info("push-branch: consolidated branch pushed", "branch", team.Status.ConsolidatedBranch)
 		}
+	case "deliver":
+		r.executeDelivery(ctx, team)
 	}
 	return nil
+}
+
+// executeDelivery dispatches each DeliveryTarget in spec.lifecycle.delivery
+// to its registered sender, recording a DeliveryStatus entry per target
+// on team.Status.Delivery regardless of outcome. Failures are surfaced
+// as events + status but never return as errors — the design's stance
+// is that delivery is best-effort and a partial delivery (e.g. Slack
+// posted, email broke) shouldn't fail the team retroactively.
+//
+// Idempotent at the executeOnComplete level: the caller only invokes
+// this once per team's lifecycle (when transitioning to a terminal
+// phase). The function itself doesn't guard against re-invocation —
+// the reconciler's transition logic is the gate.
+func (r *AgentTeamReconciler) executeDelivery(ctx context.Context, team *claudev1alpha1.AgentTeam) {
+	if team.Spec.Lifecycle == nil || len(team.Spec.Lifecycle.Delivery) == 0 {
+		return
+	}
+	dispatcher := r.deliveryDispatcher()
+	now := time.Now()
+	for _, target := range team.Spec.Lifecycle.Delivery {
+		status := claudev1alpha1.DeliveryStatus{
+			Type:        target.Type,
+			Target:      delivery.TargetLabel(target),
+			DeliveredAt: metav1.NewTime(now),
+			Success:     true,
+		}
+		if err := dispatcher.Send(ctx, r.Client, target, team); err != nil {
+			status.Success = false
+			status.Error = err.Error()
+			metrics.RecordDeliveryFailure(team.Name, team.Namespace, target.Type)
+			r.recordEvent(team, corev1.EventTypeWarning, "DeliveryFailed",
+				"Delivery %s to %s failed: %v", target.Type, status.Target, err)
+		} else {
+			metrics.RecordDeliverySuccess(team.Name, team.Namespace, target.Type)
+			r.recordEvent(team, corev1.EventTypeNormal, "DeliveryComplete",
+				"Delivery %s to %s succeeded", target.Type, status.Target)
+		}
+		team.Status.Delivery = append(team.Status.Delivery, status)
+	}
 }
 
 // --- Pull Request Creation ---
@@ -1657,7 +1896,7 @@ func buildPRBody(team *claudev1alpha1.AgentTeam) string {
 	}
 
 	fmt.Fprintln(&b, "---")
-	fmt.Fprintln(&b, "Generated by [claude-teams-operator](https://github.com/amcheste/claude-teams-operator).")
+	fmt.Fprintln(&b, "Generated by [kagents](https://github.com/amcheste/kagents).")
 	return b.String()
 }
 
@@ -1704,7 +1943,7 @@ func (r *AgentTeamReconciler) checkApprovalGate(ctx context.Context, team *claud
 	}
 
 	// Check for the approval annotation.
-	annotationKey := "approved.claude.amcheste.io/" + event
+	annotationKey := "approved.kagents.dev/" + event
 	if team.Annotations[annotationKey] == "true" {
 		return true
 	}
@@ -1783,6 +2022,285 @@ func (r *AgentTeamReconciler) dependenciesMet(ctx context.Context, team *claudev
 	return true
 }
 
+// effectiveDependencies returns the set of teammate names this teammate must
+// wait for before spawning. Sources, in order:
+//
+//   - When team.Spec.Pipeline is set, every teammate in every upstream
+//     stage of this teammate's stage (the pipeline graph drives ordering;
+//     per-teammate DependsOn is mutually exclusive and CEL-rejected).
+//   - Otherwise, the explicit DependsOn list on TeammateSpec.
+//   - In both cases, every Inputs[].From — data-flow dependencies always
+//     contribute regardless of the ordering mode.
+//
+// Duplicates and empty names are dropped so the result is safe to pass to
+// dependenciesMet. The team argument may be nil for unit tests that only
+// exercise the DependsOn + Inputs paths.
+func effectiveDependencies(team *claudev1alpha1.AgentTeam, tm claudev1alpha1.TeammateSpec) []string {
+	seen := make(map[string]struct{})
+	out := make([]string, 0)
+	add := func(name string) {
+		if name == "" {
+			return
+		}
+		if _, dup := seen[name]; dup {
+			return
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+
+	if team != nil && team.Spec.Pipeline != nil {
+		for _, dep := range pipelineDependencies(team, tm.Name) {
+			add(dep)
+		}
+	} else {
+		for _, d := range tm.DependsOn {
+			add(d)
+		}
+	}
+	for _, in := range tm.Inputs {
+		add(in.From)
+	}
+	return out
+}
+
+// stageForTeammate locates the StageSpec that contains the named teammate
+// within team.Spec.Pipeline. Returns (zero, false) when no pipeline is set
+// or the teammate is not assigned to any stage — a misconfiguration in the
+// latter case that the reconciler treats as "no pipeline-derived deps" so
+// the teammate still has a chance to spawn via Inputs/DependsOn.
+func stageForTeammate(team *claudev1alpha1.AgentTeam, tmName string) (claudev1alpha1.StageSpec, bool) {
+	if team == nil || team.Spec.Pipeline == nil {
+		return claudev1alpha1.StageSpec{}, false
+	}
+	for _, st := range team.Spec.Pipeline.Stages {
+		for _, t := range st.Teammates {
+			if t == tmName {
+				return st, true
+			}
+		}
+	}
+	return claudev1alpha1.StageSpec{}, false
+}
+
+// pipelineDependencies returns the names of teammates that must complete
+// before the named teammate can spawn, derived from the pipeline graph:
+// every teammate in every stage listed in this teammate's stage's DependsOn.
+// Returns nil when no pipeline is set or the teammate isn't in any stage.
+func pipelineDependencies(team *claudev1alpha1.AgentTeam, tmName string) []string {
+	stage, ok := stageForTeammate(team, tmName)
+	if !ok {
+		return nil
+	}
+	if len(stage.DependsOn) == 0 {
+		return nil
+	}
+	// Index stages by name for fast lookup.
+	byName := make(map[string]claudev1alpha1.StageSpec, len(team.Spec.Pipeline.Stages))
+	for _, st := range team.Spec.Pipeline.Stages {
+		byName[st.Name] = st
+	}
+	var deps []string
+	for _, depStage := range stage.DependsOn {
+		st, ok := byName[depStage]
+		if !ok {
+			continue
+		}
+		deps = append(deps, st.Teammates...)
+	}
+	return deps
+}
+
+// stageApprovalGranted reports whether the stage's approval gate is
+// satisfied. A stage without ApprovalRequired is always granted; one
+// with ApprovalRequired needs the annotation
+// `approved.kagents.dev/stage-{name}=true` on the team.
+func stageApprovalGranted(team *claudev1alpha1.AgentTeam, stage claudev1alpha1.StageSpec) bool {
+	if !stage.ApprovalRequired {
+		return true
+	}
+	return team.Annotations["approved.kagents.dev/stage-"+stage.Name] == "true"
+}
+
+// updatePipelineStatus refreshes team.Status.Pipeline from current teammate
+// pod phases when spec.pipeline is set, or clears the field when not.
+// Must be called after syncPodStatuses so team.Status.Teammates is current.
+//
+// Per-stage Phase is computed from teammate phases plus the upstream-stage
+// completion graph:
+//
+//   - any teammate Failed                                       → "Failed"
+//   - every teammate Completed                                  → "Completed"
+//   - any upstream stage not yet Completed                      → "Waiting"
+//   - this stage gated on ApprovalRequired + no annotation yet  → "PendingApproval"
+//   - any teammate already spawned (Running/Pending/Completed)  → "Running"
+//   - otherwise (gates clear, no teammate yet spawned)          → "Waiting"
+//
+// StartedAt/CompletedAt are preserved across reconciles once set so a
+// stage's transition timeline survives status rebuilds.
+func (r *AgentTeamReconciler) updatePipelineStatus(team *claudev1alpha1.AgentTeam, now time.Time) {
+	if team.Spec.Pipeline == nil || len(team.Spec.Pipeline.Stages) == 0 {
+		team.Status.Pipeline = nil
+		return
+	}
+
+	// Index teammate phases by name.
+	phase := make(map[string]string, len(team.Status.Teammates))
+	for _, st := range team.Status.Teammates {
+		phase[st.Name] = st.Phase
+	}
+
+	// Preserve existing timestamps across reconciles.
+	prev := map[string]claudev1alpha1.StageStatus{}
+	if team.Status.Pipeline != nil {
+		for _, ss := range team.Status.Pipeline.Stages {
+			prev[ss.Name] = ss
+		}
+	}
+
+	stages := make([]claudev1alpha1.StageStatus, 0, len(team.Spec.Pipeline.Stages))
+	stageCompleted := make(map[string]bool, len(team.Spec.Pipeline.Stages))
+	completed := 0
+	currentStage := ""
+
+	for _, s := range team.Spec.Pipeline.Stages {
+		ss := prev[s.Name]
+		ss.Name = s.Name
+
+		ready := 0
+		anyFailed := false
+		anySpawned := false
+		for _, tmName := range s.Teammates {
+			switch phase[tmName] {
+			case "Completed":
+				ready++
+				anySpawned = true
+			case "Failed":
+				anyFailed = true
+				anySpawned = true
+			case "Running", "Pending":
+				anySpawned = true
+			}
+		}
+		ss.TeammatesReady = fmt.Sprintf("%d/%d", ready, len(s.Teammates))
+
+		upstreamReady := true
+		for _, dep := range s.DependsOn {
+			if !stageCompleted[dep] {
+				upstreamReady = false
+				break
+			}
+		}
+
+		prevPhase := ss.Phase
+		switch {
+		case anyFailed:
+			ss.Phase = "Failed"
+		case ready == len(s.Teammates) && len(s.Teammates) > 0:
+			ss.Phase = "Completed"
+			stageCompleted[s.Name] = true
+			if ss.CompletedAt == nil {
+				t := metav1.NewTime(now)
+				ss.CompletedAt = &t
+			}
+		case !upstreamReady:
+			ss.Phase = "Waiting"
+		case s.ApprovalRequired && !stageApprovalGranted(team, s):
+			ss.Phase = "PendingApproval"
+		case anySpawned:
+			ss.Phase = "Running"
+			if ss.StartedAt == nil {
+				t := metav1.NewTime(now)
+				ss.StartedAt = &t
+			}
+		default:
+			ss.Phase = "Waiting"
+		}
+
+		// Emit observability signals on phase transitions. Running and
+		// Completed are the two interesting edges:
+		//
+		//   * Running:   flip the stage_active gauge to 1 so dashboards
+		//                show where each team currently is.
+		//   * Completed: flip the gauge back to 0 and observe the stage's
+		//                wall-clock duration (StartedAt → now). The
+		//                histogram observation is gated on a fresh
+		//                CompletedAt (== now) so re-reconciles of an
+		//                already-completed stage don't double-count.
+		metrics.SetPipelineStageActive(team.Name, team.Namespace, ss.Name, ss.Phase == "Running")
+		if prevPhase != "Completed" && ss.Phase == "Completed" && ss.StartedAt != nil && ss.CompletedAt != nil {
+			metrics.ObservePipelineStageDuration(team.Name, team.Namespace, ss.Name,
+				ss.CompletedAt.Sub(ss.StartedAt.Time).Seconds())
+		}
+
+		if ss.Phase == "Completed" {
+			completed++
+		} else if currentStage == "" {
+			currentStage = s.Name
+		}
+		stages = append(stages, ss)
+	}
+
+	team.Status.Pipeline = &claudev1alpha1.PipelineStatus{
+		CurrentStage:    currentStage,
+		StagesCompleted: completed,
+		StagesTotal:     len(team.Spec.Pipeline.Stages),
+		Stages:          stages,
+	}
+}
+
+// findProducerOutputPath looks up the absolute path the producer teammate
+// writes the named artifact to, by scanning the producer's Outputs for an
+// entry whose path basename matches. Returns "" if no such producer or
+// artifact is declared — call sites treat that as a misconfigured Inputs[]
+// entry and skip the input.
+func findProducerOutputPath(team *claudev1alpha1.AgentTeam, from, artifact string) string {
+	for _, tm := range team.Spec.Teammates {
+		if tm.Name != from {
+			continue
+		}
+		for _, out := range tm.Outputs {
+			if filepath.Base(out.Path) == artifact {
+				return out.Path
+			}
+		}
+	}
+	return ""
+}
+
+// recordTeammateArtifacts appends ArtifactStatus entries to team.Status.Artifacts
+// for each Outputs[] entry the named teammate declares. Idempotent: an artifact
+// already present (same Name + ProducedBy) is not re-added, so calling this
+// every reconcile after the producer reaches Succeeded is safe. Should be
+// invoked once per teammate transition to Completed.
+//
+// Each newly-appended artifact also bumps the
+// kagents_team_artifacts_produced_total counter — the existence check
+// above is what makes the metric idempotent across reconciles.
+func recordTeammateArtifacts(team *claudev1alpha1.AgentTeam, tm claudev1alpha1.TeammateSpec, at time.Time) {
+	if len(tm.Outputs) == 0 {
+		return
+	}
+	existing := make(map[string]struct{}, len(team.Status.Artifacts))
+	for _, a := range team.Status.Artifacts {
+		existing[a.ProducedBy+"/"+a.Name] = struct{}{}
+	}
+	for _, out := range tm.Outputs {
+		name := filepath.Base(out.Path)
+		key := tm.Name + "/" + name
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		team.Status.Artifacts = append(team.Status.Artifacts, claudev1alpha1.ArtifactStatus{
+			Name:       name,
+			Path:       out.Path,
+			ProducedBy: tm.Name,
+			ProducedAt: metav1.NewTime(at),
+		})
+		metrics.RecordArtifactProduced(team.Name, team.Namespace, tm.Name)
+	}
+}
+
 // --- Timeout / Budget ---
 
 func (r *AgentTeamReconciler) isTimedOut(team *claudev1alpha1.AgentTeam) bool {
@@ -1842,7 +2360,7 @@ func (r *AgentTeamReconciler) terminateAllPods(ctx context.Context, team *claude
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList,
 		client.InNamespace(team.Namespace),
-		client.MatchingLabels{"claude.amcheste.io/team": team.Name},
+		client.MatchingLabels{"kagents.dev/team": team.Name},
 	); err != nil {
 		return err
 	}
