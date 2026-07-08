@@ -1,6 +1,6 @@
 // Package v1alpha1 contains API Schema definitions for the claude v1alpha1 API group.
 // +kubebuilder:object:generate=true
-// +groupName=claude.amcheste.io
+// +groupName=kagents.dev
 package v1alpha1
 
 import (
@@ -9,6 +9,7 @@ import (
 )
 
 // AgentTeamSpec defines the desired state of an AgentTeam.
+// +kubebuilder:validation:XValidation:rule="!(has(self.pipeline) && self.teammates.exists(t, has(t.dependsOn) && size(t.dependsOn) > 0))",message="spec.pipeline and spec.teammates[].dependsOn are mutually exclusive — pipeline derives teammate ordering from the stage graph"
 type AgentTeamSpec struct {
 	// Repository configuration for the codebase agents will work on.
 	// Use this for coding tasks. Optional when Workspace is set.
@@ -46,6 +47,35 @@ type AgentTeamSpec struct {
 	// Observability configures metrics and notifications.
 	// +optional
 	Observability *ObservabilitySpec `json:"observability,omitempty"`
+
+	// Pipeline declares an ordered set of stages with explicit fan-out/merge
+	// semantics. When set, the operator derives each teammate's effective
+	// dependencies from the stage graph instead of the per-teammate DependsOn
+	// field, which becomes mutually exclusive (enforced by CEL validation
+	// on this spec). Inputs[].From still contributes regardless.
+	// +optional
+	Pipeline *PipelineSpec `json:"pipeline,omitempty"`
+
+	// Harness selects the agent runtime that powers this team's pods.
+	// Today the only supported value is "claude-code" (Anthropic's native
+	// Claude Code Agent Teams protocol), which is also the default when
+	// omitted. The field exists so the operator's API stays neutral to a
+	// single agent runtime; future harnesses for other team-based agent
+	// systems can plug in behind the same CRD without an API break.
+	// +kubebuilder:validation:Enum=claude-code
+	// +kubebuilder:default="claude-code"
+	// +optional
+	Harness string `json:"harness,omitempty"`
+
+	// ImagePullSecrets are credentials for pulling private container
+	// images, including OCI-distributed skills. The same secrets are
+	// applied to agent pods (for the runner image) and to skill-puller
+	// init containers (for pulling skill artifacts via ORAS). Use
+	// kubernetes.io/dockerconfigjson Secrets — the operator mounts them
+	// into the init container so ORAS can resolve registry credentials
+	// from $DOCKER_CONFIG.
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 }
 
 // RepositorySpec defines the git repository configuration.
@@ -107,20 +137,37 @@ type LeadSpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-// SkillSource identifies where to load a skill from. Exactly one field should be set.
+// SkillSource identifies where to load a skill from. Exactly one of
+// ConfigMap or OCI must be set (enforced by CEL on SkillSpec).
+//
+// ConfigMap is simplest and lives entirely within the cluster — good
+// for skills authored alongside the team CRs. OCI distributes skills
+// as registry artifacts so they can be versioned, signed, shared
+// across clusters, and pulled from public or private registries.
 type SkillSource struct {
 	// ConfigMap references a ConfigMap in the same namespace.
 	// Each key in the ConfigMap becomes a file in the skill directory.
 	// +optional
 	ConfigMap string `json:"configMap,omitempty"`
 
-	// OCI is an OCI artifact reference containing the skill files (e.g. "ghcr.io/org/skills/web-research:v1").
-	// TODO: OCI skill pulling is not yet implemented; use ConfigMap instead.
+	// OCI is an OCI artifact reference containing the skill files
+	// (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+	// an `oras pull` init container at pod startup to materialize the
+	// skill onto an emptyDir; the main container then sees the files
+	// under ~/.claude/skills/{name}/. Private registries are supported
+	// via spec.imagePullSecrets.
+	//
+	// Re-pull semantics: the init container runs once per pod start,
+	// so the artifact is re-pulled on every pod create. There is no
+	// shared cache between pods — operators who want one should pin
+	// to immutable digests so the registry can short-circuit identical
+	// pulls cheaply.
 	// +optional
 	OCI string `json:"oci,omitempty"`
 }
 
 // SkillSpec defines a Claude Code skill to mount into an agent pod.
+// +kubebuilder:validation:XValidation:rule="(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci) ? 1 : 0) == 1",message="skill source must set exactly one of configMap or oci"
 type SkillSpec struct {
 	// Name is the skill directory name under .claude/skills/.
 	Name string `json:"name"`
@@ -188,7 +235,7 @@ type WorkspaceSpec struct {
 }
 
 // ApprovalGateSpec pauses execution before a named event until human approval is recorded.
-// Approval is granted by adding the annotation approved.claude.amcheste.io/{event}=true to the AgentTeam.
+// Approval is granted by adding the annotation approved.kagents.dev/{event}=true to the AgentTeam.
 type ApprovalGateSpec struct {
 	// Event is the gate identifier. Use "spawn-{teammate-name}" to gate spawning a specific teammate.
 	Event string `json:"event"`
@@ -225,6 +272,24 @@ type TeammateSpec struct {
 	// +optional
 	DependsOn []string `json:"dependsOn,omitempty"`
 
+	// Outputs declares the artifacts this teammate produces. Each entry
+	// records a file path the teammate's prompt is expected to write.
+	// On completion the operator records every declared output in
+	// AgentTeam.Status.Artifacts and makes them available to any
+	// downstream teammate that consumes them via Inputs.
+	// +optional
+	Outputs []OutputSpec `json:"outputs,omitempty"`
+
+	// Inputs declares the upstream-produced artifacts this teammate
+	// consumes. Each entry names a producer teammate (From) and an
+	// artifact basename (Artifact); the operator (a) treats From as
+	// an implicit dependency — this teammate is not spawned until the
+	// producer reaches Completed — and (b) wires an init container that
+	// stages the artifact at MountPath on this teammate's pod before
+	// the main container starts.
+	// +optional
+	Inputs []InputSpec `json:"inputs,omitempty"`
+
 	// Skills to mount into .claude/skills/ for this teammate.
 	// +optional
 	Skills []SkillSpec `json:"skills,omitempty"`
@@ -236,6 +301,90 @@ type TeammateSpec struct {
 	// Resources defines compute resources for this teammate's pod.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+// PipelineSpec models a multi-stage workflow with explicit fan-out/merge
+// as an alternative to flat per-teammate DependsOn. Each teammate is
+// listed in exactly one stage; the stage graph determines spawn ordering.
+type PipelineSpec struct {
+	// Stages is the ordered list of stages. Ordering is for readability;
+	// runtime ordering follows the StageSpec.DependsOn graph.
+	// +kubebuilder:validation:MinItems=1
+	Stages []StageSpec `json:"stages"`
+}
+
+// StageSpec defines one stage of a pipeline.
+type StageSpec struct {
+	// Name is the unique identifier for this stage within the pipeline.
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// Teammates names the teammates that participate in this stage. Names
+	// must match spec.teammates[].name. A teammate may not appear in more
+	// than one stage.
+	// +kubebuilder:validation:MinItems=1
+	Teammates []string `json:"teammates"`
+
+	// DependsOn names earlier stages this one waits on. Every teammate in
+	// every listed stage must reach Succeeded before any teammate in this
+	// stage is spawned.
+	// +optional
+	DependsOn []string `json:"dependsOn,omitempty"`
+
+	// Fan documents the stage's relationship to its dependencies and is
+	// informational in v0.8.0 — both values currently behave identically.
+	// "parallel" (default) signals a normal fan-out stage; "merge" signals
+	// a synthesis stage that consumes outputs from multiple upstream
+	// branches. Distinct runtime semantics are reserved for a future
+	// version.
+	// +kubebuilder:validation:Enum=parallel;merge
+	// +kubebuilder:default="parallel"
+	// +optional
+	Fan string `json:"fan,omitempty"`
+
+	// ApprovalRequired gates the entire stage on a human approval
+	// annotation `approved.kagents.dev/stage-{name}=true` on the
+	// AgentTeam. No teammate in this stage spawns until the annotation
+	// is present.
+	// +optional
+	ApprovalRequired bool `json:"approvalRequired,omitempty"`
+}
+
+// OutputSpec declares a file an agent produces. Downstream teammates
+// consume it by declaring a matching InputSpec; the operator also
+// records each output in AgentTeam.Status.Artifacts on completion.
+type OutputSpec struct {
+	// Path is the absolute filesystem path on the producer pod where the
+	// teammate writes the artifact. For Cowork teams this is typically a
+	// path under the team's output mount (e.g. /workspace/output/findings.md).
+	Path string `json:"path"`
+
+	// Description is an optional human-readable summary of the artifact.
+	// +optional
+	Description string `json:"description,omitempty"`
+}
+
+// InputSpec declares an artifact this teammate consumes from an upstream
+// teammate's outputs. The operator (a) treats From as an implicit
+// dependency — this teammate is not spawned until the producer reaches
+// Completed — and (b) wires an init container that copies the named
+// artifact onto MountPath on this teammate's pod before the main
+// container starts. The final on-pod path is {MountPath}/{Artifact}.
+type InputSpec struct {
+	// From names the upstream teammate that produces the artifact.
+	From string `json:"from"`
+
+	// Artifact is the basename of the producer's output file
+	// (e.g. "findings.md" for an output path of /workspace/output/findings.md).
+	// The operator resolves the full source path by scanning the named
+	// producer's Outputs[] for an entry whose Path basename matches.
+	Artifact string `json:"artifact"`
+
+	// MountPath is the absolute directory path on this teammate's pod
+	// where the artifact will be made available. The operator creates
+	// an emptyDir at MountPath and stages the artifact there via an
+	// init container; the main container sees {MountPath}/{Artifact}.
+	MountPath string `json:"mountPath"`
 }
 
 // ScopeSpec restricts file access for a teammate.
@@ -291,16 +440,24 @@ type LifecycleSpec struct {
 	BudgetLimit *string `json:"budgetLimit,omitempty"`
 
 	// OnComplete determines what happens when the team finishes.
-	// +kubebuilder:validation:Enum=create-pr;push-branch;notify;none
+	// +kubebuilder:validation:Enum=create-pr;push-branch;notify;deliver;none
 	// +kubebuilder:default="notify"
 	OnComplete string `json:"onComplete,omitempty"`
+
+	// Delivery is the list of artifact delivery targets fired when
+	// OnComplete=deliver. Each target is dispatched independently;
+	// per-target success/failure is recorded in status.delivery[].
+	// Delivery failure is best-effort — the team is not rolled back to
+	// Failed if a target rejects the request.
+	// +optional
+	Delivery []DeliveryTarget `json:"delivery,omitempty"`
 
 	// PullRequest configures PR creation when onComplete is "create-pr".
 	// +optional
 	PullRequest *PullRequestSpec `json:"pullRequest,omitempty"`
 
 	// ApprovalGates pause execution before specified events until human approval is recorded.
-	// Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.claude.amcheste.io/<event>=true
+	// Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true
 	// +optional
 	ApprovalGates []ApprovalGateSpec `json:"approvalGates,omitempty"`
 
@@ -340,6 +497,76 @@ type LifecycleSpec struct {
 	// .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
 	// +optional
 	ConsolidatedBranchTemplate string `json:"consolidatedBranchTemplate,omitempty"`
+}
+
+// DeliveryTarget describes one artifact delivery destination fired when
+// OnComplete=deliver. The Type discriminator selects which fields are
+// meaningful — webhook + slack are functional in v0.8.0; email and
+// google-drive are accepted at the API level and dispatched to senders
+// that currently return a "not implemented" error recorded in
+// status.delivery[].
+//
+// Across all types the operator never persists credentials itself; the
+// sender pulls them from CredentialsSecret at dispatch time so a
+// compromised operator pod can't enumerate Slack tokens / SMTP
+// passwords / Drive service-account keys at rest.
+type DeliveryTarget struct {
+	// Type names the delivery backend.
+	// +kubebuilder:validation:Enum=webhook;slack;email;google-drive
+	Type string `json:"type"`
+
+	// ArtifactPath is the file path within the team's output workspace
+	// (typically /workspace/output) to attach to or send as the
+	// delivery body. Optional for delivery types that carry their
+	// message inline (e.g. a plain Slack notification with no file).
+	// +optional
+	ArtifactPath string `json:"artifactPath,omitempty"`
+
+	// Message is the human-readable text that accompanies the delivery
+	// (Slack message text, webhook notes, email body lead-in).
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// URL is the destination for the webhook delivery type.
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// Channel is the destination for the slack delivery type
+	// (e.g. "#reports"). The slack sender reads
+	// CredentialsSecret["slack-webhook-url"] to know where to post.
+	// +optional
+	Channel string `json:"channel,omitempty"`
+
+	// To is the recipient list for the email delivery type.
+	// +optional
+	To []string `json:"to,omitempty"`
+
+	// Subject is the message subject for the email delivery type.
+	// +optional
+	Subject string `json:"subject,omitempty"`
+
+	// AttachmentPath is a file path within the team's output workspace
+	// to attach to the email delivery. Equivalent to ArtifactPath but
+	// kept distinct because some emails attach + reference a separate
+	// artifact in the body.
+	// +optional
+	AttachmentPath string `json:"attachmentPath,omitempty"`
+
+	// Folder is the destination folder for the google-drive delivery
+	// type.
+	// +optional
+	Folder string `json:"folder,omitempty"`
+
+	// CredentialsSecret names a Secret in the team's namespace carrying
+	// authentication for this target. Expected keys per type:
+	//
+	//   - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL
+	//   - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"
+	//   - google-drive: "service-account.json"
+	//
+	// Not required for webhook; the URL is in the spec.
+	// +optional
+	CredentialsSecret string `json:"credentialsSecret,omitempty"`
 }
 
 // PullRequestSpec configures automatic PR creation.
@@ -459,6 +686,26 @@ type AgentTeamStatus struct {
 	// +optional
 	ConsolidatedBranch string `json:"consolidatedBranch,omitempty"`
 
+	// Artifacts records the files produced by teammates that declared
+	// Outputs in their spec. Populated as each producer teammate reaches
+	// Completed; the operator does not retroactively scan teammate pods
+	// for undeclared files.
+	// +optional
+	Artifacts []ArtifactStatus `json:"artifacts,omitempty"`
+
+	// Pipeline reports stage-level progress when spec.pipeline is set.
+	// Recomputed every reconcile from teammate pod phases; cleared if
+	// spec.pipeline is removed.
+	// +optional
+	Pipeline *PipelineStatus `json:"pipeline,omitempty"`
+
+	// Delivery records the outcome of every DeliveryTarget dispatched
+	// by OnComplete=deliver. Populated once executeOnComplete has run;
+	// each entry is independent — partial success is normal and the
+	// team is not rolled back when individual targets fail.
+	// +optional
+	Delivery []DeliveryStatus `json:"delivery,omitempty"`
+
 	// Conditions represent the latest available observations.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -498,6 +745,89 @@ type TeammateStatus struct {
 	RestartCount int32 `json:"restartCount,omitempty"`
 }
 
+// DeliveryStatus records the result of a single DeliveryTarget dispatch.
+type DeliveryStatus struct {
+	// Type mirrors the originating DeliveryTarget.Type.
+	Type string `json:"type"`
+
+	// Target is a short human-readable label describing where this
+	// delivery went (e.g. "#reports" for slack, the URL for webhook).
+	// +optional
+	Target string `json:"target,omitempty"`
+
+	// DeliveredAt is when the sender finished — whether successfully
+	// or not.
+	DeliveredAt metav1.Time `json:"deliveredAt"`
+
+	// Success is true iff the sender returned no error.
+	Success bool `json:"success"`
+
+	// Error carries the sender's failure message when Success is false.
+	// +optional
+	Error string `json:"error,omitempty"`
+}
+
+// PipelineStatus reports stage-level progress for a pipelined team.
+type PipelineStatus struct {
+	// CurrentStage names the lowest-indexed stage that has not yet
+	// reached Completed. Empty when every stage is Completed.
+	// +optional
+	CurrentStage string `json:"currentStage,omitempty"`
+
+	// StagesCompleted is the count of stages whose teammates have all
+	// reached Succeeded.
+	StagesCompleted int `json:"stagesCompleted"`
+
+	// StagesTotal is the total number of stages declared on the spec.
+	StagesTotal int `json:"stagesTotal"`
+
+	// Stages reports per-stage detail.
+	// +optional
+	Stages []StageStatus `json:"stages,omitempty"`
+}
+
+// StageStatus reports a single stage's runtime state.
+type StageStatus struct {
+	// Name matches the StageSpec.Name.
+	Name string `json:"name"`
+
+	// Phase is one of Waiting, PendingApproval, Running, Completed, Failed.
+	// +kubebuilder:validation:Enum=Waiting;PendingApproval;Running;Completed;Failed
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// StartedAt is when the first teammate in this stage was spawned.
+	// +optional
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+
+	// CompletedAt is when the last teammate in this stage reached Succeeded.
+	// +optional
+	CompletedAt *metav1.Time `json:"completedAt,omitempty"`
+
+	// TeammatesReady reports completed-vs-total teammates for this stage
+	// in the form "N/M" (e.g. "2/3").
+	// +optional
+	TeammatesReady string `json:"teammatesReady,omitempty"`
+}
+
+// ArtifactStatus records a single artifact produced by a teammate that
+// declared a matching OutputSpec.
+type ArtifactStatus struct {
+	// Name is the basename of the artifact file (e.g. "findings.md").
+	Name string `json:"name"`
+
+	// Path is the producer pod's filesystem path where the artifact was
+	// written (mirrors OutputSpec.Path).
+	Path string `json:"path"`
+
+	// ProducedBy is the name of the teammate that produced this artifact.
+	ProducedBy string `json:"producedBy"`
+
+	// ProducedAt is when the operator recorded the artifact — typically
+	// the first reconcile after the producer pod reached Succeeded.
+	ProducedAt metav1.Time `json:"producedAt"`
+}
+
 // TaskSummary reports aggregate task progress.
 type TaskSummary struct {
 	Total      int `json:"total"`
@@ -518,6 +848,7 @@ type PullRequestStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.ready`
+// +kubebuilder:printcolumn:name="Stage",type=string,JSONPath=`.status.pipeline.currentStage`,priority=1
 // +kubebuilder:printcolumn:name="Tasks Done",type=integer,JSONPath=`.status.tasks.completed`
 // +kubebuilder:printcolumn:name="Cost",type=string,JSONPath=`.status.estimatedCost`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

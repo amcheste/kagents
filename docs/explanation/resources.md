@@ -32,7 +32,7 @@ The primary resource. Defines a single team and its lifecycle.
 The three load-bearing fields are `spec.lead`, `spec.teammates`, and either `spec.repository` (coding mode) or `spec.workspace` (Cowork mode):
 
 ```yaml
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeam
 metadata:
   name: auth-refactor
@@ -90,7 +90,7 @@ Other status fields worth knowing:
 A reusable team blueprint. Does not run on its own. It sits inert until an `AgentTeamRun` references it.
 
 ```yaml
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeamTemplate
 metadata:
   name: 3-agent-security-review
@@ -130,7 +130,7 @@ It writes a `Ready` condition on `status`. The `AgentTeamRun` controller refuses
 One concrete run of a template. The controller merges run-level fields on top of the template's defaults and creates a child `AgentTeam`.
 
 ```yaml
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeamRun
 metadata:
   name: q4-security-review
@@ -173,7 +173,7 @@ The Template+Run pattern shines when you want the same team shape (same lead pro
 Define the template once:
 
 ```yaml
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeamTemplate
 metadata:
   name: 3-agent-security-review
@@ -202,7 +202,7 @@ Then trigger it on whatever repo needs it:
 
 ```yaml
 ---
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeamRun
 metadata: { name: payments-review, namespace: security-team }
 spec:
@@ -213,7 +213,7 @@ spec:
     credentialsSecret: git-credentials
   auth: { apiKeySecret: anthropic-api-key }
 ---
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeamRun
 metadata: { name: identity-review, namespace: security-team }
 spec:
@@ -224,7 +224,7 @@ spec:
     credentialsSecret: git-credentials
   auth: { apiKeySecret: anthropic-api-key }
 ---
-apiVersion: claude.amcheste.io/v1alpha1
+apiVersion: kagents.dev/v1alpha1
 kind: AgentTeamRun
 metadata: { name: notifications-review, namespace: security-team }
 spec:

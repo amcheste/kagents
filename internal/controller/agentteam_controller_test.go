@@ -25,7 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
+	"github.com/amcheste/kagents/internal/harness"
 )
 
 // --- Test Helpers ---
@@ -104,7 +105,7 @@ func succeededPod(name, namespace, teamName string) *corev1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    map[string]string{"claude.amcheste.io/team": teamName},
+			Labels:    map[string]string{"kagents.dev/team": teamName},
 		},
 		Status: corev1.PodStatus{Phase: corev1.PodSucceeded},
 	}
@@ -249,11 +250,11 @@ func TestReconcileInitializing_DeploysPods(t *testing.T) {
 	// Lead pod created.
 	var pod corev1.Pod
 	require.NoError(t, r.Get(ctx, types.NamespacedName{Name: "deploy-team-lead", Namespace: "default"}, &pod))
-	assert.Equal(t, "lead", pod.Labels["claude.amcheste.io/role"])
+	assert.Equal(t, "lead", pod.Labels["kagents.dev/role"])
 
 	// Teammate pod created (no dependencies).
 	require.NoError(t, r.Get(ctx, types.NamespacedName{Name: "deploy-team-worker", Namespace: "default"}, &pod))
-	assert.Equal(t, "teammate", pod.Labels["claude.amcheste.io/role"])
+	assert.Equal(t, "teammate", pod.Labels["kagents.dev/role"])
 }
 
 func TestReconcileInitializing_DependsOnBlocks(t *testing.T) {
@@ -309,7 +310,7 @@ func TestReconcileInitializing_ApprovalGateBlocksTeammate(t *testing.T) {
 func TestReconcileInitializing_ApprovalGrantedViaAnnotation(t *testing.T) {
 	team := withRepo(minimalTeam("approved-team"))
 	team.Annotations = map[string]string{
-		"approved.claude.amcheste.io/spawn-worker": "true",
+		"approved.kagents.dev/spawn-worker": "true",
 	}
 	team.Spec.Lifecycle = &claudev1alpha1.LifecycleSpec{
 		ApprovalGates: []claudev1alpha1.ApprovalGateSpec{
@@ -428,7 +429,7 @@ func TestBuildAgentPod_CodingMode(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	assert.Equal(t, "pod-test-worker", pod.Name)
 	assert.Equal(t, corev1.RestartPolicyNever, pod.Spec.RestartPolicy)
@@ -449,12 +450,12 @@ func TestBuildAgentPod_LeadHasNoWorktreePath(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "lead", "opus", "lead prompt", "auto-accept", true,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	env := envMap(pod)
 	_, hasWorktree := env["WORKTREE_PATH"]
 	assert.False(t, hasWorktree, "lead should not get a worktree path")
-	assert.Equal(t, "lead", pod.Labels["claude.amcheste.io/role"])
+	assert.Equal(t, "lead", pod.Labels["kagents.dev/role"])
 }
 
 func TestBuildAgentPod_WithSkills(t *testing.T) {
@@ -466,7 +467,7 @@ func TestBuildAgentPod_WithSkills(t *testing.T) {
 	}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, skills, nil)
+		corev1.ResourceRequirements{}, nil, skills, nil, nil)
 
 	volNames := volumeNames(pod)
 	assert.Contains(t, volNames, "skill-web-research")
@@ -485,7 +486,7 @@ func TestBuildAgentPod_WithMCPServers(t *testing.T) {
 	}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, mcpServers)
+		corev1.ResourceRequirements{}, nil, nil, mcpServers, nil)
 
 	volNames := volumeNames(pod)
 	assert.Contains(t, volNames, "mcp-config")
@@ -502,7 +503,7 @@ func TestBuildAgentPod_CoworkMode(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	volNames := volumeNames(pod)
 	assert.Contains(t, volNames, "workspace-output")
@@ -525,7 +526,7 @@ func TestBuildAgentPod_ScopeEnvVars(t *testing.T) {
 	}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, scope, nil, nil)
+		corev1.ResourceRequirements{}, scope, nil, nil, nil)
 
 	env := envMap(pod)
 	assert.Equal(t, "internal/:api/", env["SCOPE_INCLUDE_PATHS"])
@@ -653,7 +654,7 @@ func TestCheckApprovalGate_GatePresentNotApproved(t *testing.T) {
 
 func TestCheckApprovalGate_ApprovedViaAnnotation(t *testing.T) {
 	team := minimalTeam("ag")
-	team.Annotations = map[string]string{"approved.claude.amcheste.io/spawn-worker": "true"}
+	team.Annotations = map[string]string{"approved.kagents.dev/spawn-worker": "true"}
 	team.Spec.Lifecycle = &claudev1alpha1.LifecycleSpec{
 		ApprovalGates: []claudev1alpha1.ApprovalGateSpec{{Event: "spawn-worker", Channel: "none"}},
 	}
@@ -959,7 +960,7 @@ func TestBuildAgentPod_OAuthAuth(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	// ANTHROPIC_API_KEY must NOT be injected when OAuth is configured.
 	env := envMap(pod)
@@ -984,7 +985,7 @@ func TestBuildAgentPod_AgentCommandOverride(t *testing.T) {
 	r.AgentCommand = []string{"sh", "-c", "exit 0"}
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	assert.Equal(t, []string{"sh", "-c", "exit 0"}, pod.Spec.Containers[0].Command,
 		"AgentCommand override must be applied to the container spec")
@@ -1135,7 +1136,7 @@ func TestBuildAgentPod_CoworkMode_PVCInput(t *testing.T) {
 	r := newReconciler(team)
 
 	pod := r.buildAgentPod(team, "worker", "sonnet", "do work", "auto-accept", false,
-		corev1.ResourceRequirements{}, nil, nil, nil)
+		corev1.ResourceRequirements{}, nil, nil, nil, nil)
 
 	// The PVC-backed input must appear as workspace-input-0 and be read-only.
 	var inputVol *corev1.Volume
@@ -1254,12 +1255,13 @@ func TestClearTeammatePendingApproval_ClearsExistingEntry(t *testing.T) {
 		"unrelated teammate must not be touched")
 }
 
-// TestAgentImage_DefaultWhenUnset verifies agentImage() returns the baked-in
-// default when the reconciler field is empty, and the override when set.
+// TestAgentImage_DefaultWhenUnset verifies agentImage() returns the harness
+// adapter's default image when the reconciler field is empty, and the
+// override when set.
 func TestAgentImage_DefaultWhenUnset(t *testing.T) {
 	r := &AgentTeamReconciler{}
-	assert.Equal(t, defaultAgentImage, r.agentImage(),
-		"agentImage must return defaultAgentImage when AgentImage is unset")
+	assert.Equal(t, harness.ClaudeCode{}.DefaultImage(), r.agentImage(),
+		"agentImage must return the claude-code adapter's default when AgentImage is unset")
 
 	r.AgentImage = "custom/image:v1"
 	assert.Equal(t, "custom/image:v1", r.agentImage(),
@@ -1416,7 +1418,7 @@ func TestEnsureAgentPod_WithMCPServers_CreatesConfigMapBeforePod(t *testing.T) {
 	}
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, servers))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, servers, nil))
 
 	// The ConfigMap must exist — otherwise the pod's mcp-config volume would
 	// fail to mount on a real cluster.
@@ -1455,11 +1457,11 @@ func TestEnsureAgentPod_Idempotent(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil))
 
 	// Second call must be a no-op — no error, pod still present.
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil),
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil),
 		"ensureAgentPod must be idempotent so repeated reconciles don't fail")
 
 	var pod corev1.Pod
@@ -1478,7 +1480,7 @@ func TestEnsureAgentPod_NoMCPServers_SkipsConfigMap(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, r.ensureAgentPod(ctx, team, "worker", "sonnet", "do work",
-		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil))
+		"auto-accept", false, corev1.ResourceRequirements{}, nil, nil, nil, nil))
 
 	var cm corev1.ConfigMap
 	err := r.Get(ctx, types.NamespacedName{
@@ -1950,4 +1952,433 @@ func TestRecordEvent_NilRecorderIsNoop(t *testing.T) {
 	assert.NotPanics(t, func() {
 		r.recordEvent(team, corev1.EventTypeNormal, "Test", "no panic with nil recorder")
 	})
+}
+
+// --- Output routing (Outputs / Inputs / ArtifactStatus) ---
+
+// TestEffectiveDependencies covers the merge of explicit DependsOn with
+// implicit Inputs[].From producers. The result is what spawn-time
+// dependency checks should wait for, deduped and order-preserving.
+func TestEffectiveDependencies(t *testing.T) {
+	cases := []struct {
+		name string
+		tm   claudev1alpha1.TeammateSpec
+		want []string
+	}{
+		{
+			name: "empty",
+			tm:   claudev1alpha1.TeammateSpec{Name: "x"},
+			want: []string{},
+		},
+		{
+			name: "only DependsOn",
+			tm:   claudev1alpha1.TeammateSpec{Name: "writer", DependsOn: []string{"researcher"}},
+			want: []string{"researcher"},
+		},
+		{
+			name: "only Inputs",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:   "writer",
+				Inputs: []claudev1alpha1.InputSpec{{From: "researcher", Artifact: "findings.md", MountPath: "/in"}},
+			},
+			want: []string{"researcher"},
+		},
+		{
+			name: "both with overlap deduped",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:      "writer",
+				DependsOn: []string{"researcher"},
+				Inputs: []claudev1alpha1.InputSpec{
+					{From: "researcher", Artifact: "findings.md", MountPath: "/in"},
+				},
+			},
+			want: []string{"researcher"},
+		},
+		{
+			name: "merge distinct + preserve DependsOn first",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:      "writer",
+				DependsOn: []string{"a"},
+				Inputs: []claudev1alpha1.InputSpec{
+					{From: "b", Artifact: "x.md", MountPath: "/x"},
+					{From: "a", Artifact: "y.md", MountPath: "/y"}, // dup of DependsOn
+					{From: "c", Artifact: "z.md", MountPath: "/z"},
+				},
+			},
+			want: []string{"a", "b", "c"},
+		},
+		{
+			name: "empty From in Inputs ignored",
+			tm: claudev1alpha1.TeammateSpec{
+				Name:   "writer",
+				Inputs: []claudev1alpha1.InputSpec{{From: "", Artifact: "x.md", MountPath: "/x"}},
+			},
+			want: []string{},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// nil team here — these cases exercise the DependsOn + Inputs paths
+			// only; pipeline mode is covered by a separate TestPipelineDependencies
+			// pair of tests below.
+			got := effectiveDependencies(nil, c.tm)
+			assert.Equal(t, c.want, got)
+		})
+	}
+}
+
+// TestFindProducerOutputPath resolves a producer's output path by basename.
+func TestFindProducerOutputPath(t *testing.T) {
+	team := &claudev1alpha1.AgentTeam{
+		Spec: claudev1alpha1.AgentTeamSpec{
+			Teammates: []claudev1alpha1.TeammateSpec{
+				{
+					Name: "researcher",
+					Outputs: []claudev1alpha1.OutputSpec{
+						{Path: "/workspace/output/findings.md"},
+						{Path: "/workspace/output/summary.txt"},
+					},
+				},
+				{
+					Name: "writer",
+					Outputs: []claudev1alpha1.OutputSpec{
+						{Path: "/workspace/output/report.pdf"},
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, "/workspace/output/findings.md",
+		findProducerOutputPath(team, "researcher", "findings.md"))
+	assert.Equal(t, "/workspace/output/summary.txt",
+		findProducerOutputPath(team, "researcher", "summary.txt"))
+	assert.Equal(t, "/workspace/output/report.pdf",
+		findProducerOutputPath(team, "writer", "report.pdf"))
+
+	// Unknown producer → empty.
+	assert.Empty(t, findProducerOutputPath(team, "ghost", "findings.md"))
+	// Known producer, unknown artifact → empty.
+	assert.Empty(t, findProducerOutputPath(team, "researcher", "missing.md"))
+}
+
+// TestRecordTeammateArtifacts is idempotent and only records declared outputs.
+func TestRecordTeammateArtifacts(t *testing.T) {
+	team := minimalTeam("artifacts")
+	tm := claudev1alpha1.TeammateSpec{
+		Name: "researcher",
+		Outputs: []claudev1alpha1.OutputSpec{
+			{Path: "/workspace/output/findings.md", Description: "research"},
+			{Path: "/workspace/output/summary.txt"},
+		},
+	}
+
+	now := time.Now()
+	recordTeammateArtifacts(team, tm, now)
+	require.Len(t, team.Status.Artifacts, 2)
+	assert.Equal(t, "findings.md", team.Status.Artifacts[0].Name)
+	assert.Equal(t, "/workspace/output/findings.md", team.Status.Artifacts[0].Path)
+	assert.Equal(t, "researcher", team.Status.Artifacts[0].ProducedBy)
+	assert.WithinDuration(t, now, team.Status.Artifacts[0].ProducedAt.Time, time.Second)
+
+	// Second call must not duplicate.
+	recordTeammateArtifacts(team, tm, now.Add(time.Hour))
+	assert.Len(t, team.Status.Artifacts, 2, "recordTeammateArtifacts must be idempotent")
+
+	// A teammate with no outputs is a no-op.
+	recordTeammateArtifacts(team, claudev1alpha1.TeammateSpec{Name: "x"}, now)
+	assert.Len(t, team.Status.Artifacts, 2)
+}
+
+// TestBuildAgentPod_OutputRouting_AddsInitContainerAndEmptyDir verifies the
+// pod-builder integration: a consumer with Inputs gets a per-input emptyDir
+// volume, a corresponding main-container mount, and an init container that
+// stages the producer's output file at the requested mountPath.
+func TestBuildAgentPod_OutputRouting_AddsInitContainerAndEmptyDir(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := minimalTeam("routed")
+	team.Spec.Workspace = &claudev1alpha1.WorkspaceSpec{
+		Output: &claudev1alpha1.WorkspaceOutputSpec{
+			Size:      "1Gi",
+			MountPath: "/workspace/output",
+		},
+	}
+	// Producer is declared at the spec level (operator scans team.Spec.Teammates
+	// to resolve the producer's output path during build).
+	team.Spec.Teammates = []claudev1alpha1.TeammateSpec{
+		{
+			Name: "researcher",
+			Outputs: []claudev1alpha1.OutputSpec{
+				{Path: "/workspace/output/findings.md"},
+			},
+		},
+	}
+
+	inputs := []claudev1alpha1.InputSpec{
+		{From: "researcher", Artifact: "findings.md", MountPath: "/workspace/stage/research"},
+	}
+
+	pod := r.buildAgentPod(team, "writer", "sonnet", "draft the report", "auto-accept",
+		false, corev1.ResourceRequirements{}, nil, nil, nil, inputs)
+
+	// One init container, one new emptyDir volume.
+	require.Len(t, pod.Spec.InitContainers, 1, "one init container per input")
+	require.Equal(t, "stage-input-0", pod.Spec.InitContainers[0].Name)
+	require.Contains(t, pod.Spec.InitContainers[0].Command[2], "/workspace/output/findings.md",
+		"init container must read the producer's declared output path")
+	require.Contains(t, pod.Spec.InitContainers[0].Command[2], "/workspace/stage/research/findings.md",
+		"init container must write to {mountPath}/{artifact}")
+
+	// Main container mounts the emptyDir at the consumer-requested mountPath.
+	var mainMount *corev1.VolumeMount
+	for i := range pod.Spec.Containers[0].VolumeMounts {
+		if pod.Spec.Containers[0].VolumeMounts[i].MountPath == "/workspace/stage/research" {
+			mainMount = &pod.Spec.Containers[0].VolumeMounts[i]
+		}
+	}
+	require.NotNil(t, mainMount, "main container must mount the input emptyDir at the consumer's mountPath")
+	assert.Equal(t, "input-0", mainMount.Name)
+	assert.True(t, mainMount.ReadOnly, "main container should not mutate staged inputs")
+
+	// Volume exists.
+	var inputVol *corev1.Volume
+	for i := range pod.Spec.Volumes {
+		if pod.Spec.Volumes[i].Name == "input-0" {
+			inputVol = &pod.Spec.Volumes[i]
+		}
+	}
+	require.NotNil(t, inputVol)
+	require.NotNil(t, inputVol.EmptyDir, "input volume must be an emptyDir")
+}
+
+// --- Pipeline stages ---
+
+// pipelineTeam builds a 4-stage pipeline fixture (research → analysis ×3
+// fanout → synthesis → distribution with stage-level approval) shared by
+// several pipeline tests below.
+func pipelineTeam(name string) *claudev1alpha1.AgentTeam {
+	team := minimalTeam(name)
+	team.Spec.Teammates = []claudev1alpha1.TeammateSpec{
+		{Name: "data-analyst"},
+		{Name: "market-analyst"},
+		{Name: "financial-analyst"},
+		{Name: "competitive-analyst"},
+		{Name: "report-writer"},
+		{Name: "email-drafter"},
+	}
+	team.Spec.Pipeline = &claudev1alpha1.PipelineSpec{
+		Stages: []claudev1alpha1.StageSpec{
+			{Name: "research", Teammates: []string{"data-analyst"}},
+			{Name: "analysis", Teammates: []string{"market-analyst", "financial-analyst", "competitive-analyst"}, DependsOn: []string{"research"}, Fan: "parallel"},
+			{Name: "synthesis", Teammates: []string{"report-writer"}, DependsOn: []string{"analysis"}, Fan: "merge"},
+			{Name: "distribution", Teammates: []string{"email-drafter"}, DependsOn: []string{"synthesis"}, ApprovalRequired: true},
+		},
+	}
+	return team
+}
+
+func TestStageForTeammate(t *testing.T) {
+	team := pipelineTeam("stage-lookup")
+
+	for _, tt := range []struct {
+		tm    string
+		stage string
+		ok    bool
+	}{
+		{"data-analyst", "research", true},
+		{"market-analyst", "analysis", true},
+		{"financial-analyst", "analysis", true},
+		{"report-writer", "synthesis", true},
+		{"email-drafter", "distribution", true},
+		{"ghost", "", false},
+	} {
+		t.Run(tt.tm, func(t *testing.T) {
+			got, ok := stageForTeammate(team, tt.tm)
+			assert.Equal(t, tt.ok, ok)
+			if ok {
+				assert.Equal(t, tt.stage, got.Name)
+			}
+		})
+	}
+
+	// No pipeline → never found.
+	flat := minimalTeam("flat")
+	_, ok := stageForTeammate(flat, "any")
+	assert.False(t, ok, "no pipeline → stageForTeammate must return false")
+}
+
+func TestPipelineDependencies(t *testing.T) {
+	team := pipelineTeam("pipeline-deps")
+
+	// research has no upstream stages.
+	assert.Nil(t, pipelineDependencies(team, "data-analyst"))
+
+	// analysis depends on research → data-analyst.
+	assert.Equal(t, []string{"data-analyst"}, pipelineDependencies(team, "market-analyst"))
+
+	// synthesis depends on analysis → all three analysts.
+	assert.ElementsMatch(t, []string{"market-analyst", "financial-analyst", "competitive-analyst"},
+		pipelineDependencies(team, "report-writer"))
+
+	// distribution depends on synthesis → report-writer.
+	assert.Equal(t, []string{"report-writer"}, pipelineDependencies(team, "email-drafter"))
+
+	// Unknown teammate → nil.
+	assert.Nil(t, pipelineDependencies(team, "ghost"))
+}
+
+func TestEffectiveDependencies_PipelineMode(t *testing.T) {
+	team := pipelineTeam("pipeline-effective")
+
+	// report-writer in synthesis stage; pipeline depends on the 3 analysts.
+	// It also declares no per-teammate DependsOn (CEL forbids it under pipeline).
+	tm := team.Spec.Teammates[4] // report-writer
+	got := effectiveDependencies(team, tm)
+	assert.ElementsMatch(t, []string{"market-analyst", "financial-analyst", "competitive-analyst"}, got)
+
+	// With pipeline + Inputs, both contribute.
+	tm.Inputs = []claudev1alpha1.InputSpec{{From: "external-data", Artifact: "x.md", MountPath: "/in"}}
+	got = effectiveDependencies(team, tm)
+	assert.ElementsMatch(t,
+		[]string{"market-analyst", "financial-analyst", "competitive-analyst", "external-data"},
+		got)
+}
+
+func TestStageApprovalGranted(t *testing.T) {
+	team := pipelineTeam("stage-approval")
+	dist := team.Spec.Pipeline.Stages[3]
+	research := team.Spec.Pipeline.Stages[0]
+
+	// research has no ApprovalRequired → always granted.
+	assert.True(t, stageApprovalGranted(team, research))
+
+	// distribution has ApprovalRequired, no annotation → not granted.
+	assert.False(t, stageApprovalGranted(team, dist))
+
+	// Add the annotation → granted.
+	team.Annotations = map[string]string{"approved.kagents.dev/stage-distribution": "true"}
+	assert.True(t, stageApprovalGranted(team, dist))
+
+	// Wrong value → not granted.
+	team.Annotations["approved.kagents.dev/stage-distribution"] = "no"
+	assert.False(t, stageApprovalGranted(team, dist))
+}
+
+func TestUpdatePipelineStatus_PhaseTransitions(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := pipelineTeam("status-transitions")
+	now := time.Unix(1700000000, 0).UTC()
+
+	// 1) No teammate has spawned yet → research Waiting (no upstream blocker),
+	//    downstream Waiting on upstream.
+	team.Status.Teammates = []claudev1alpha1.TeammateStatus{
+		{Name: "data-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "market-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "financial-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "competitive-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "report-writer", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "email-drafter", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+	}
+	r.updatePipelineStatus(team, now)
+	require.NotNil(t, team.Status.Pipeline)
+	assert.Equal(t, 4, team.Status.Pipeline.StagesTotal)
+	assert.Equal(t, 0, team.Status.Pipeline.StagesCompleted)
+	assert.Equal(t, "research", team.Status.Pipeline.CurrentStage)
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[0].Phase, "research Waiting at start")
+	assert.Equal(t, "0/1", team.Status.Pipeline.Stages[0].TeammatesReady)
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[1].Phase, "analysis Waiting on research")
+
+	// 2) data-analyst running → research Running.
+	team.Status.Teammates[0].Phase = "Running"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Running", team.Status.Pipeline.Stages[0].Phase)
+	require.NotNil(t, team.Status.Pipeline.Stages[0].StartedAt, "StartedAt populated on first non-Waiting")
+
+	// 3) data-analyst completed → research Completed, analysis transitions Running once a teammate spawns.
+	team.Status.Teammates[0].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[0].Phase)
+	require.NotNil(t, team.Status.Pipeline.Stages[0].CompletedAt)
+	assert.Equal(t, "1/1", team.Status.Pipeline.Stages[0].TeammatesReady)
+	assert.Equal(t, 1, team.Status.Pipeline.StagesCompleted)
+	assert.Equal(t, "analysis", team.Status.Pipeline.CurrentStage)
+	// analysis upstream ready, no teammate spawned yet → Waiting.
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[1].Phase)
+
+	// 4) Two analysts done, one running → analysis Running, 2/3 ready.
+	team.Status.Teammates[1].Phase = "Completed"
+	team.Status.Teammates[2].Phase = "Completed"
+	team.Status.Teammates[3].Phase = "Running"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Running", team.Status.Pipeline.Stages[1].Phase)
+	assert.Equal(t, "2/3", team.Status.Pipeline.Stages[1].TeammatesReady)
+
+	// 5) All analysts done → analysis Completed, synthesis Waiting (no teammate yet).
+	team.Status.Teammates[3].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[1].Phase)
+	assert.Equal(t, 2, team.Status.Pipeline.StagesCompleted)
+
+	// 6) report-writer completed → synthesis Completed; distribution gated on approval.
+	team.Status.Teammates[4].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[2].Phase)
+	assert.Equal(t, "PendingApproval", team.Status.Pipeline.Stages[3].Phase,
+		"distribution requires approval; no annotation → PendingApproval")
+	assert.Equal(t, 3, team.Status.Pipeline.StagesCompleted)
+	assert.Equal(t, "distribution", team.Status.Pipeline.CurrentStage)
+
+	// 7) Grant approval → distribution Waiting (still no teammate spawned).
+	team.Annotations = map[string]string{"approved.kagents.dev/stage-distribution": "true"}
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Waiting", team.Status.Pipeline.Stages[3].Phase)
+
+	// 8) email-drafter completes → distribution Completed, pipeline done.
+	team.Status.Teammates[5].Phase = "Completed"
+	r.updatePipelineStatus(team, now)
+	assert.Equal(t, "Completed", team.Status.Pipeline.Stages[3].Phase)
+	assert.Equal(t, 4, team.Status.Pipeline.StagesCompleted)
+	assert.Empty(t, team.Status.Pipeline.CurrentStage, "all stages Completed → CurrentStage empty")
+}
+
+func TestUpdatePipelineStatus_FailedStage(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := pipelineTeam("status-failed")
+	team.Status.Teammates = []claudev1alpha1.TeammateStatus{
+		{Name: "data-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Failed"}},
+		{Name: "market-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "financial-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "competitive-analyst", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "report-writer", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+		{Name: "email-drafter", AgentStatus: claudev1alpha1.AgentStatus{Phase: "Waiting"}},
+	}
+	r.updatePipelineStatus(team, time.Now())
+	assert.Equal(t, "Failed", team.Status.Pipeline.Stages[0].Phase)
+}
+
+func TestUpdatePipelineStatus_NoPipelineClearsField(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := minimalTeam("no-pipeline")
+	// Pre-populate a stale status to confirm it's cleared.
+	team.Status.Pipeline = &claudev1alpha1.PipelineStatus{StagesTotal: 1}
+	r.updatePipelineStatus(team, time.Now())
+	assert.Nil(t, team.Status.Pipeline, "no spec.pipeline → status.pipeline cleared")
+}
+
+// TestBuildAgentPod_OutputRouting_SkipsUnresolvedInput tolerates a misconfigured
+// input (no matching producer) by silently dropping the staging — the pod
+// still launches.
+func TestBuildAgentPod_OutputRouting_SkipsUnresolvedInput(t *testing.T) {
+	r := &AgentTeamReconciler{}
+	team := minimalTeam("unresolved")
+	team.Spec.Workspace = &claudev1alpha1.WorkspaceSpec{
+		Output: &claudev1alpha1.WorkspaceOutputSpec{Size: "1Gi"},
+	}
+	inputs := []claudev1alpha1.InputSpec{
+		{From: "ghost", Artifact: "nope.md", MountPath: "/stage"},
+	}
+	pod := r.buildAgentPod(team, "writer", "sonnet", "p", "auto-accept",
+		false, corev1.ResourceRequirements{}, nil, nil, nil, inputs)
+	assert.Empty(t, pod.Spec.InitContainers,
+		"unresolved input must not produce a stale init container")
 }

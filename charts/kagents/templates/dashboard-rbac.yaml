@@ -1,0 +1,63 @@
+{{- if .Values.dashboard.enabled }}
+# Read-only ClusterRole for the dashboard. Same role definition is used
+# whether the dashboard is cluster-wide or namespace-scoped — only the
+# binding kind changes (ClusterRoleBinding vs RoleBinding) below.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-dashboard-reader
+  labels:
+    app.kubernetes.io/name: kagents
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: dashboard
+rules:
+  - apiGroups: ["kagents.dev"]
+    resources: ["agentteams", "agentteamtemplates", "agentteamruns"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+{{- if .Values.dashboard.namespace }}
+# Namespace-scoped binding — dashboard sees AgentTeams only in
+# {{ .Values.dashboard.namespace }}.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-dashboard-reader
+  namespace: {{ .Values.dashboard.namespace }}
+  labels:
+    app.kubernetes.io/name: kagents
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-dashboard-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.dashboard.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+{{- else }}
+# Cluster-wide binding — dashboard sees AgentTeams in every namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-dashboard-reader
+  labels:
+    app.kubernetes.io/name: kagents
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-dashboard-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.dashboard.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}

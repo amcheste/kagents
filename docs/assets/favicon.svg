@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Alan Chester · Monogram (solid)</title>
+  <desc>The canonical AεC mark. Ink ground, paper letterforms, ε at 50% scale.</desc>
+  
+  <rect width="64" height="64" fill="#0B0B0C"></rect>
+  
+  <g font-family="&#39;IBM Plex Mono&#39;, ui-monospace, monospace" font-weight="500" font-size="26.88" letter-spacing="-0.03em" fill="#F6F4EE" text-anchor="middle" dominant-baseline="central">
+    <text x="20" y="32">A</text>
+    
+    <text x="32" y="32" font-size="13.44" font-weight="300" fill="#F6F4EE" fill-opacity="0.65">ε</text>
+    <text x="44" y="32">C</text>
+  </g>
+  
+  <g stroke="#F6F4EE" stroke-opacity="0.25" stroke-width="1" fill="none">
+    
+    <path d="M5 5 L5 11 M5 5 L11 5"></path>
+    
+    <path d="M59 5 L59 11 M59 5 L53 5"></path>
+    
+    <path d="M5 59 L5 53 M5 59 L11 59"></path>
+    
+    <path d="M59 59 L59 53 M59 59 L53 59"></path>
+  </g>
+</svg>

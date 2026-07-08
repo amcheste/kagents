@@ -1,0 +1,97 @@
+# Pipeline-stages sample — a four-stage knowledge work workflow with
+# fan-out, merge, and a final approval gate.
+#
+# Stage graph:
+#
+#     research (data-analyst)
+#         │
+#         ▼
+#     analysis (market / financial / competitive analysts, parallel fan-out)
+#         │
+#         ▼
+#     synthesis (report-writer, merges the three analyses)
+#         │
+#         ▼
+#     distribution (email-drafter, ApprovalRequired)
+#
+# Each stage's teammates spawn only after every teammate in every upstream
+# stage has reached Succeeded. Distribution is gated on a human approval:
+# no email-drafter pod is created until you apply
+#
+#     kubectl annotate agentteam quarterly-brief \
+#       "approved.kagents.dev/stage-distribution=true"
+#
+# Status is reported under .status.pipeline (currentStage, per-stage Phase,
+# teammatesReady, startedAt, completedAt).
+#
+# Apply with:
+#   kubectl apply -n cowork-agents -f config/samples/pipeline-team.yaml
+apiVersion: kagents.dev/v1alpha1
+kind: AgentTeam
+metadata:
+  name: quarterly-brief
+  namespace: cowork-agents
+spec:
+  workspace:
+    output:
+      mountPath: "/workspace/output"
+      size: "1Gi"
+
+  auth:
+    apiKeySecret: "anthropic-api-key"
+
+  lead:
+    model: "opus"
+    prompt: |
+      Coordinate the quarterly brief through research → parallel analysis
+      → synthesis → distribution. Wait for human approval before
+      distributing.
+
+  teammates:
+    - name: "data-analyst"
+      model: "sonnet"
+      prompt: "Pull and clean last quarter's data; write a structured findings file."
+
+    - name: "market-analyst"
+      model: "sonnet"
+      prompt: "Read the research findings and produce a market-facing analysis."
+
+    - name: "financial-analyst"
+      model: "sonnet"
+      prompt: "Read the research findings and produce a financial analysis."
+
+    - name: "competitive-analyst"
+      model: "sonnet"
+      prompt: "Read the research findings and produce a competitive analysis."
+
+    - name: "report-writer"
+      model: "sonnet"
+      prompt: "Synthesise all three analyses into a one-page executive summary."
+
+    - name: "email-drafter"
+      model: "sonnet"
+      prompt: "Draft the distribution emails referencing the executive summary."
+
+  pipeline:
+    stages:
+      - name: "research"
+        teammates: ["data-analyst"]
+
+      - name: "analysis"
+        teammates: ["market-analyst", "financial-analyst", "competitive-analyst"]
+        dependsOn: ["research"]
+        fan: "parallel"
+
+      - name: "synthesis"
+        teammates: ["report-writer"]
+        dependsOn: ["analysis"]
+        fan: "merge"
+
+      - name: "distribution"
+        teammates: ["email-drafter"]
+        dependsOn: ["synthesis"]
+        approvalRequired: true
+
+  lifecycle:
+    timeout: "2h"
+    budgetLimit: "15.00"

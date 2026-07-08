@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 // AgentTeamTemplateReconciler validates AgentTeamTemplate specs and surfaces
@@ -35,9 +35,9 @@ var validModels = map[string]struct{}{
 	"haiku":  {},
 }
 
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteamtemplates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteamtemplates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=claude.amcheste.io,resources=agentteamtemplates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteamtemplates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteamtemplates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=kagents.dev,resources=agentteamtemplates/finalizers,verbs=update
 
 func (r *AgentTeamTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)

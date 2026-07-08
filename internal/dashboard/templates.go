@@ -7,7 +7,7 @@ import (
 	"io"
 	"strconv"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 //go:embed templates/*.html
@@ -58,6 +58,21 @@ var templateFuncs = template.FuncMap{
 			}
 		}
 		return claudev1alpha1.TeammateStatus{Name: name}
+	},
+
+	// pipelinePercent computes a 0..100 progress value for the pipeline
+	// progress bar. Returns 0 when the pipeline reports no stages —
+	// callers that gate the section on .Status.Pipeline being non-nil
+	// won't reach this in that case, but the guard is cheap.
+	"pipelinePercent": func(p *claudev1alpha1.PipelineStatus) int {
+		if p == nil || p.StagesTotal == 0 {
+			return 0
+		}
+		pct := (p.StagesCompleted * 100) / p.StagesTotal
+		if pct > 100 {
+			return 100
+		}
+		return pct
 	},
 }
 

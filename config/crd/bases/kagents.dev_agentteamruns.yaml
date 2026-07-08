@@ -1,0 +1,834 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.0
+  name: agentteamruns.kagents.dev
+spec:
+  group: kagents.dev
+  names:
+    kind: AgentTeamRun
+    listKind: AgentTeamRunList
+    plural: agentteamruns
+    singular: agentteamrun
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.templateRef.name
+      name: Template
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AgentTeamRun is an instance of an AgentTeamTemplate applied to
+          a specific repository.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AgentTeamRunSpec defines an instance of a template applied
+              to a specific repo.
+            properties:
+              auth:
+                description: Auth configures API authentication for this run.
+                properties:
+                  apiKeySecret:
+                    description: APIKeySecret references a Secret containing ANTHROPIC_API_KEY.
+                    type: string
+                  oauthSecret:
+                    description: OAuthSecret references a Secret containing OAuth
+                      tokens for subscription auth.
+                    type: string
+                type: object
+              lead:
+                description: Lead configures the team lead for this run.
+                properties:
+                  mcpServers:
+                    description: MCPServers configures Model Context Protocol connections
+                      for the lead agent.
+                    items:
+                      description: MCPServerSpec configures a Model Context Protocol
+                        server for an agent.
+                      properties:
+                        credentialsSecret:
+                          description: CredentialsSecret references a Secret containing
+                            an 'apiKey' key for bearer auth.
+                          type: string
+                        name:
+                          description: Name identifies this MCP server in the agent's
+                            config.
+                          type: string
+                        url:
+                          description: URL is the MCP server endpoint.
+                          type: string
+                      required:
+                      - name
+                      - url
+                      type: object
+                    type: array
+                  model:
+                    default: opus
+                    description: Model to use for the team lead.
+                    enum:
+                    - opus
+                    - sonnet
+                    - haiku
+                    type: string
+                  permissionMode:
+                    default: auto-accept
+                    description: PermissionMode controls how the lead handles permission
+                      requests.
+                    enum:
+                    - auto-accept
+                    - plan
+                    - default
+                    type: string
+                  prompt:
+                    description: Prompt is the initial instruction for the team lead.
+                    type: string
+                  resources:
+                    description: Resources defines compute resources for the lead
+                      pod.
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This field depends on the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                  skills:
+                    description: Skills to mount into .claude/skills/ for the lead
+                      agent.
+                    items:
+                      description: SkillSpec defines a Claude Code skill to mount
+                        into an agent pod.
+                      properties:
+                        name:
+                          description: Name is the skill directory name under .claude/skills/.
+                          type: string
+                        source:
+                          description: Source identifies where to load the skill from.
+                          properties:
+                            configMap:
+                              description: |-
+                                ConfigMap references a ConfigMap in the same namespace.
+                                Each key in the ConfigMap becomes a file in the skill directory.
+                              type: string
+                            oci:
+                              description: |-
+                                OCI is an OCI artifact reference containing the skill files
+                                (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+                                an `oras pull` init container at pod startup to materialize the
+                                skill onto an emptyDir; the main container then sees the files
+                                under ~/.claude/skills/{name}/. Private registries are supported
+                                via spec.imagePullSecrets.
+
+                                Re-pull semantics: the init container runs once per pod start,
+                                so the artifact is re-pulled on every pod create. There is no
+                                shared cache between pods — operators who want one should pin
+                                to immutable digests so the registry can short-circuit identical
+                                pulls cheaply.
+                              type: string
+                          type: object
+                      required:
+                      - name
+                      - source
+                      type: object
+                      x-kubernetes-validations:
+                      - message: skill source must set exactly one of configMap or
+                          oci
+                        rule: '(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci)
+                          ? 1 : 0) == 1'
+                    type: array
+                required:
+                - prompt
+                type: object
+              lifecycle:
+                description: Lifecycle overrides for this run.
+                properties:
+                  approvalGates:
+                    description: |-
+                      ApprovalGates pause execution before specified events until human approval is recorded.
+                      Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true
+                    items:
+                      description: |-
+                        ApprovalGateSpec pauses execution before a named event until human approval is recorded.
+                        Approval is granted by adding the annotation approved.kagents.dev/{event}=true to the AgentTeam.
+                      properties:
+                        channel:
+                          default: none
+                          description: Channel is how the approval request notification
+                            is sent.
+                          enum:
+                          - webhook
+                          - none
+                          type: string
+                        event:
+                          description: Event is the gate identifier. Use "spawn-{teammate-name}"
+                            to gate spawning a specific teammate.
+                          type: string
+                        webhookUrl:
+                          description: WebhookURL to POST when this gate is triggered
+                            (used when channel is "webhook").
+                          type: string
+                      required:
+                      - event
+                      type: object
+                    type: array
+                  budgetLimit:
+                    description: BudgetLimit is the maximum API spend in USD before
+                      the team is terminated (e.g. "10.00").
+                    type: string
+                  consolidatedBranchTemplate:
+                    description: |-
+                      ConsolidatedBranchTemplate is a Go template rendered to produce the
+                      branch name pushed by OnComplete=push-branch. Available variables:
+                      .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
+                    type: string
+                  delivery:
+                    description: |-
+                      Delivery is the list of artifact delivery targets fired when
+                      OnComplete=deliver. Each target is dispatched independently;
+                      per-target success/failure is recorded in status.delivery[].
+                      Delivery failure is best-effort — the team is not rolled back to
+                      Failed if a target rejects the request.
+                    items:
+                      description: |-
+                        DeliveryTarget describes one artifact delivery destination fired when
+                        OnComplete=deliver. The Type discriminator selects which fields are
+                        meaningful — webhook + slack are functional in v0.8.0; email and
+                        google-drive are accepted at the API level and dispatched to senders
+                        that currently return a "not implemented" error recorded in
+                        status.delivery[].
+
+                        Across all types the operator never persists credentials itself; the
+                        sender pulls them from CredentialsSecret at dispatch time so a
+                        compromised operator pod can't enumerate Slack tokens / SMTP
+                        passwords / Drive service-account keys at rest.
+                      properties:
+                        artifactPath:
+                          description: |-
+                            ArtifactPath is the file path within the team's output workspace
+                            (typically /workspace/output) to attach to or send as the
+                            delivery body. Optional for delivery types that carry their
+                            message inline (e.g. a plain Slack notification with no file).
+                          type: string
+                        attachmentPath:
+                          description: |-
+                            AttachmentPath is a file path within the team's output workspace
+                            to attach to the email delivery. Equivalent to ArtifactPath but
+                            kept distinct because some emails attach + reference a separate
+                            artifact in the body.
+                          type: string
+                        channel:
+                          description: |-
+                            Channel is the destination for the slack delivery type
+                            (e.g. "#reports"). The slack sender reads
+                            CredentialsSecret["slack-webhook-url"] to know where to post.
+                          type: string
+                        credentialsSecret:
+                          description: |-
+                            CredentialsSecret names a Secret in the team's namespace carrying
+                            authentication for this target. Expected keys per type:
+
+                              - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL
+                              - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"
+                              - google-drive: "service-account.json"
+
+                            Not required for webhook; the URL is in the spec.
+                          type: string
+                        folder:
+                          description: |-
+                            Folder is the destination folder for the google-drive delivery
+                            type.
+                          type: string
+                        message:
+                          description: |-
+                            Message is the human-readable text that accompanies the delivery
+                            (Slack message text, webhook notes, email body lead-in).
+                          type: string
+                        subject:
+                          description: Subject is the message subject for the email
+                            delivery type.
+                          type: string
+                        to:
+                          description: To is the recipient list for the email delivery
+                            type.
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type names the delivery backend.
+                          enum:
+                          - webhook
+                          - slack
+                          - email
+                          - google-drive
+                          type: string
+                        url:
+                          description: URL is the destination for the webhook delivery
+                            type.
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    type: array
+                  gitCredentialsSecret:
+                    description: |-
+                      GitCredentialsSecret names a Secret in the team's namespace carrying git
+                      push credentials. The Secret must contain either 'ssh-privatekey' or
+                      'token'. Used by OnComplete=push-branch (and OnComplete=create-pr when
+                      push-branch runs ahead of it). Falls back to Spec.Repository.CredentialsSecret
+                      when unset, so teams that already configured clone credentials with push
+                      scope don't need to duplicate.
+                    type: string
+                  githubTokenSecret:
+                    description: |-
+                      GitHubTokenSecret names a Secret in the team's namespace carrying a
+                      GitHub token under the key GITHUB_TOKEN. Used by OnComplete=create-pr
+                      (and OnComplete=push-branch, once implemented) to authenticate against
+                      the GitHub REST API.
+                    type: string
+                  maxRestarts:
+                    default: 3
+                    description: |-
+                      MaxRestarts bounds how many times each teammate pod may be re-spawned
+                      after a Failed phase before the team itself is marked Failed. The lead
+                      pod is not subject to this limit; a lead crash always fails the team.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  onComplete:
+                    default: notify
+                    description: OnComplete determines what happens when the team
+                      finishes.
+                    enum:
+                    - create-pr
+                    - push-branch
+                    - notify
+                    - deliver
+                    - none
+                    type: string
+                  prTitleTemplate:
+                    description: |-
+                      PRTitleTemplate overrides the title template used by OnComplete=create-pr.
+                      Available variables: .TeamName, .Namespace. When empty, falls back to
+                      Spec.Lifecycle.PullRequest.TitleTemplate, then to the default
+                      "claude-teams: {{.TeamName}}".
+                    type: string
+                  pullRequest:
+                    description: PullRequest configures PR creation when onComplete
+                      is "create-pr".
+                    properties:
+                      labels:
+                        description: Labels to apply to the PR.
+                        items:
+                          type: string
+                        type: array
+                      reviewers:
+                        description: Reviewers to request on the PR.
+                        items:
+                          type: string
+                        type: array
+                      targetBranch:
+                        default: main
+                        description: TargetBranch is the branch to open the PR against.
+                        type: string
+                      titleTemplate:
+                        description: |-
+                          TitleTemplate is a Go template for the PR title.
+                          Available variables: .TeamName, .Namespace
+                        type: string
+                    type: object
+                  timeout:
+                    default: 4h
+                    description: Timeout is the maximum duration the team can run
+                      (e.g. "4h", "30m").
+                    type: string
+                type: object
+              repository:
+                description: Repository configuration for this run (coding mode).
+                properties:
+                  branch:
+                    default: main
+                    description: Branch to clone and work from.
+                    type: string
+                  credentialsSecret:
+                    description: |-
+                      CredentialsSecret references a Secret containing git credentials.
+                      The secret should contain either 'ssh-privatekey' or 'token'.
+                    type: string
+                  url:
+                    description: URL is the git clone URL.
+                    type: string
+                  worktreeStrategy:
+                    default: per-teammate
+                    description: WorktreeStrategy determines how git worktrees are
+                      managed.
+                    enum:
+                    - per-teammate
+                    - shared
+                    type: string
+                required:
+                - url
+                type: object
+              templateRef:
+                description: TemplateRef references the AgentTeamTemplate to instantiate.
+                properties:
+                  name:
+                    description: Name of the AgentTeamTemplate in the same namespace.
+                    type: string
+                required:
+                - name
+                type: object
+              workspace:
+                description: Workspace configures inputs/outputs for this run (Cowork
+                  mode).
+                properties:
+                  inputs:
+                    description: Inputs are read-only volumes mounted into all agent
+                      pods.
+                    items:
+                      description: WorkspaceInputSpec defines a read-only input mounted
+                        into the agent pod.
+                      properties:
+                        configMap:
+                          description: ConfigMap references a ConfigMap to mount as
+                            a directory.
+                          type: string
+                        mountPath:
+                          description: MountPath is where to mount this input inside
+                            the container.
+                          type: string
+                        pvc:
+                          description: PVC references an existing PersistentVolumeClaim
+                            to mount read-only.
+                          type: string
+                      required:
+                      - mountPath
+                      type: object
+                    type: array
+                  output:
+                    description: Output configures the shared writable output volume.
+                    properties:
+                      mountPath:
+                        default: /workspace/output
+                        description: MountPath inside the container where the output
+                          volume is mounted.
+                        type: string
+                      pvc:
+                        description: PVC is the name of an existing PVC to use. If
+                          empty, the operator creates one named "{team}-output".
+                        type: string
+                      size:
+                        default: 5Gi
+                        description: Size of the auto-created PVC.
+                        type: string
+                      storageClass:
+                        description: StorageClass for the auto-created PVC. Defaults
+                          to "nfs".
+                        type: string
+                    type: object
+                type: object
+            required:
+            - auth
+            - lead
+            - templateRef
+            type: object
+          status:
+            description: AgentTeamStatus defines the observed state of an AgentTeam.
+            properties:
+              artifacts:
+                description: |-
+                  Artifacts records the files produced by teammates that declared
+                  Outputs in their spec. Populated as each producer teammate reaches
+                  Completed; the operator does not retroactively scan teammate pods
+                  for undeclared files.
+                items:
+                  description: |-
+                    ArtifactStatus records a single artifact produced by a teammate that
+                    declared a matching OutputSpec.
+                  properties:
+                    name:
+                      description: Name is the basename of the artifact file (e.g.
+                        "findings.md").
+                      type: string
+                    path:
+                      description: |-
+                        Path is the producer pod's filesystem path where the artifact was
+                        written (mirrors OutputSpec.Path).
+                      type: string
+                    producedAt:
+                      description: |-
+                        ProducedAt is when the operator recorded the artifact — typically
+                        the first reconcile after the producer pod reached Succeeded.
+                      format: date-time
+                      type: string
+                    producedBy:
+                      description: ProducedBy is the name of the teammate that produced
+                        this artifact.
+                      type: string
+                  required:
+                  - name
+                  - path
+                  - producedAt
+                  - producedBy
+                  type: object
+                type: array
+              completedAt:
+                description: CompletedAt is when the team finished execution.
+                format: date-time
+                type: string
+              conditions:
+                description: Conditions represent the latest available observations.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              consolidatedBranch:
+                description: |-
+                  ConsolidatedBranch is the branch name pushed by OnComplete=push-branch.
+                  Populated once the push-branch Job succeeds; OnComplete=create-pr reads
+                  this as the PR head branch when set, in place of Spec.Repository.Branch.
+                type: string
+              delivery:
+                description: |-
+                  Delivery records the outcome of every DeliveryTarget dispatched
+                  by OnComplete=deliver. Populated once executeOnComplete has run;
+                  each entry is independent — partial success is normal and the
+                  team is not rolled back when individual targets fail.
+                items:
+                  description: DeliveryStatus records the result of a single DeliveryTarget
+                    dispatch.
+                  properties:
+                    deliveredAt:
+                      description: |-
+                        DeliveredAt is when the sender finished — whether successfully
+                        or not.
+                      format: date-time
+                      type: string
+                    error:
+                      description: Error carries the sender's failure message when
+                        Success is false.
+                      type: string
+                    success:
+                      description: Success is true iff the sender returned no error.
+                      type: boolean
+                    target:
+                      description: |-
+                        Target is a short human-readable label describing where this
+                        delivery went (e.g. "#reports" for slack, the URL for webhook).
+                      type: string
+                    type:
+                      description: Type mirrors the originating DeliveryTarget.Type.
+                      type: string
+                  required:
+                  - deliveredAt
+                  - success
+                  - type
+                  type: object
+                type: array
+              estimatedCost:
+                description: EstimatedCost is the estimated API cost in USD (e.g.
+                  "4.50").
+                type: string
+              lead:
+                description: Lead reports the team lead's status.
+                properties:
+                  phase:
+                    description: Phase of this agent.
+                    enum:
+                    - Pending
+                    - Running
+                    - Idle
+                    - Completed
+                    - Failed
+                    - Waiting
+                    type: string
+                  podName:
+                    description: PodName is the name of the agent's pod.
+                    type: string
+                type: object
+              phase:
+                description: Phase is the current lifecycle phase of the team.
+                enum:
+                - Pending
+                - Initializing
+                - Running
+                - Completed
+                - Failed
+                - TimedOut
+                - BudgetExceeded
+                type: string
+              pipeline:
+                description: |-
+                  Pipeline reports stage-level progress when spec.pipeline is set.
+                  Recomputed every reconcile from teammate pod phases; cleared if
+                  spec.pipeline is removed.
+                properties:
+                  currentStage:
+                    description: |-
+                      CurrentStage names the lowest-indexed stage that has not yet
+                      reached Completed. Empty when every stage is Completed.
+                    type: string
+                  stages:
+                    description: Stages reports per-stage detail.
+                    items:
+                      description: StageStatus reports a single stage's runtime state.
+                      properties:
+                        completedAt:
+                          description: CompletedAt is when the last teammate in this
+                            stage reached Succeeded.
+                          format: date-time
+                          type: string
+                        name:
+                          description: Name matches the StageSpec.Name.
+                          type: string
+                        phase:
+                          description: Phase is one of Waiting, PendingApproval, Running,
+                            Completed, Failed.
+                          enum:
+                          - Waiting
+                          - PendingApproval
+                          - Running
+                          - Completed
+                          - Failed
+                          type: string
+                        startedAt:
+                          description: StartedAt is when the first teammate in this
+                            stage was spawned.
+                          format: date-time
+                          type: string
+                        teammatesReady:
+                          description: |-
+                            TeammatesReady reports completed-vs-total teammates for this stage
+                            in the form "N/M" (e.g. "2/3").
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  stagesCompleted:
+                    description: |-
+                      StagesCompleted is the count of stages whose teammates have all
+                      reached Succeeded.
+                    type: integer
+                  stagesTotal:
+                    description: StagesTotal is the total number of stages declared
+                      on the spec.
+                    type: integer
+                required:
+                - stagesCompleted
+                - stagesTotal
+                type: object
+              pullRequest:
+                description: PullRequest reports PR creation status.
+                properties:
+                  state:
+                    type: string
+                  url:
+                    type: string
+                type: object
+              ready:
+                description: |-
+                  Ready reports how many teammate pods are ready vs. declared, in the form
+                  "running+completed/total" (e.g. "3/5"). Shown in `kubectl get` output.
+                type: string
+              startedAt:
+                description: StartedAt is when the team began execution.
+                format: date-time
+                type: string
+              tasks:
+                description: Tasks reports aggregate task progress.
+                properties:
+                  completed:
+                    type: integer
+                  inProgress:
+                    type: integer
+                  pending:
+                    type: integer
+                  total:
+                    type: integer
+                required:
+                - completed
+                - inProgress
+                - pending
+                - total
+                type: object
+              teammates:
+                description: Teammates reports each teammate's status.
+                items:
+                  description: TeammateStatus reports a teammate's state.
+                  properties:
+                    name:
+                      description: Name matches the teammate's spec name.
+                      type: string
+                    pendingApproval:
+                      description: PendingApproval is the approval gate event this
+                        teammate is waiting on, if any.
+                      type: string
+                    phase:
+                      description: Phase of this agent.
+                      enum:
+                      - Pending
+                      - Running
+                      - Idle
+                      - Completed
+                      - Failed
+                      - Waiting
+                      type: string
+                    podName:
+                      description: PodName is the name of the agent's pod.
+                      type: string
+                    restartCount:
+                      description: |-
+                        RestartCount is the number of times this teammate's pod has been
+                        re-spawned after a Failed phase. The team is marked Failed when any
+                        teammate's RestartCount reaches Spec.Lifecycle.MaxRestarts.
+                      format: int32
+                      type: integer
+                    tasksClaimed:
+                      description: TasksClaimed is the number of tasks currently owned
+                        by this teammate.
+                      type: integer
+                    tasksCompleted:
+                      description: TasksCompleted is the number of tasks this teammate
+                        has finished.
+                      type: integer
+                  required:
+                  - name
+                  type: object
+                type: array
+              totalTokensUsed:
+                description: TotalTokensUsed is the estimated total tokens consumed.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

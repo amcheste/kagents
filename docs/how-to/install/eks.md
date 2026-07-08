@@ -92,7 +92,7 @@ The `efs-ap` provisioning mode creates an EFS Access Point per PVC, which gives 
 
 ```bash
 helm install kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --create-namespace
 ```
 
@@ -108,8 +108,8 @@ kubectl rollout status deployment/kagents-controller-manager \
 The repo includes a smoke test that provisions an `AgentTeam`, lets the lead and a teammate exchange a single mailbox round-trip, and reports the effective StorageClass and AccessMode.
 
 ```bash
-git clone https://github.com/amcheste/claude-teams-operator.git
-cd claude-teams-operator
+git clone https://github.com/amcheste/kagents.git
+cd kagents
 make mailbox-smoke-test
 ```
 

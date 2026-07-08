@@ -14,8 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
-	"github.com/amcheste/claude-teams-operator/internal/github"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
+	"github.com/amcheste/kagents/internal/github"
 )
 
 // githubCaptureServer stands up a fake GitHub API capturing each request's
@@ -285,4 +285,3 @@ func TestPRBranches_UsesRepoBranchAndTargetBranch(t *testing.T) {
 	assert.Equal(t, "work", head)
 	assert.Equal(t, "develop", base)
 }
-

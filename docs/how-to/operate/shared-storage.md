@@ -18,7 +18,7 @@ Override at install time:
 
 ```bash
 helm upgrade kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --reuse-values \
   --set storage.teamStateSize=10Gi \
   --set storage.repoSize=50Gi

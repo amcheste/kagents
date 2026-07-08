@@ -1,5 +1,5 @@
 // Package dashboard implements the read-only HTTP API that backs the
-// claude-teams-operator web UI. The API exposes AgentTeam list/detail,
+// kagents web UI. The API exposes AgentTeam list/detail,
 // pod log streaming, and a health endpoint. Live-update SSE will land in
 // the v0.6.0 follow-up (#139) — the Server type already carries a context
 // so adding it doesn't require an API rewrite.
@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 // Server hosts the dashboard HTTP API. CRClient reads CRDs (AgentTeam,
@@ -33,7 +33,7 @@ import (
 //
 // Both clients are swappable in tests via the exported fields.
 type Server struct {
-	// CRClient reads claude.amcheste.io/v1alpha1 resources.
+	// CRClient reads kagents.dev/v1alpha1 resources.
 	CRClient client.Client
 
 	// KubeClient streams pod logs via the typed clientset. Optional — when

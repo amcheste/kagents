@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kagents
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  # Defaults consumed by the operator at AgentTeam reconcile time. Operators
+  # who want to tune them post-install can edit this ConfigMap and restart
+  # the controller pod — no chart upgrade required.
+  CLAUDE_CODE_IMAGE: "{{ .Values.claudeCodeImage.repository }}:{{ .Values.claudeCodeImage.tag }}"
+  DEFAULT_STORAGE_CLASS: "{{ .Values.storage.storageClassName }}"
+  DEFAULT_TEAM_STATE_SIZE: "{{ .Values.storage.teamStateSize }}"
+  DEFAULT_REPO_SIZE: "{{ .Values.storage.repoSize }}"
+  DEFAULT_BUDGET_LIMIT: "{{ .Values.defaultBudgetLimit }}"
+  DEFAULT_TIMEOUT: "{{ .Values.defaultTimeout }}"
+  LOG_LEVEL: "{{ .Values.logLevel }}"
+  {{- with .Values.extraEnv }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}

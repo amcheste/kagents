@@ -17,7 +17,7 @@ set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:/Applications/Docker.app/Contents/Resources/bin:${PATH}"
 
 CLUSTER_NAME="${KIND_CLUSTER_NAME:-claude-teams}"
-IMG="${IMG:-ghcr.io/amcheste/claude-teams-operator:acceptance}"
+IMG="${IMG:-ghcr.io/amcheste/kagents:acceptance}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 

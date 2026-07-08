@@ -1,0 +1,282 @@
+# Default values for kagents
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/amcheste/kagents
+  tag: latest
+  pullPolicy: IfNotPresent
+
+claudeCodeImage:
+  repository: ghcr.io/amcheste/claude-code-runner
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Image pull secrets used for both the operator image and the agent runner
+# image. List of references — supply when pulling from a private registry.
+# Example: imagePullSecrets: [{name: ghcr-creds}]
+imagePullSecrets: []
+
+# Service account for the operator
+serviceAccount:
+  create: true
+  name: kagents
+
+# Operator pod resources
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Default storage class for team PVCs
+# Must support ReadWriteMany (NFS, EFS, etc.)
+storage:
+  storageClassName: "nfs"
+  teamStateSize: "5Gi"
+  repoSize: "20Gi"
+
+# Metrics
+metrics:
+  enabled: true
+  port: 8080
+  serviceMonitor:
+    # Set to true when kube-prometheus-stack (or another Prometheus Operator
+    # install) is present. Requires the monitoring.coreos.com CRDs.
+    enabled: false
+    # Namespace to install the ServiceMonitor into. Defaults to the release
+    # namespace. Set to the Prometheus namespace when using a namespace-scoped
+    # ServiceMonitor selector.
+    namespace: ""
+    interval: 30s
+    # Extra labels applied to the ServiceMonitor. Use this to match the label
+    # selector on your Prometheus CR (e.g. release: kube-prometheus-stack).
+    additionalLabels: {}
+  grafanaDashboard:
+    # Renders a ConfigMap containing a Grafana dashboard JSON for Claude team
+    # observability. With the stock kube-prometheus-stack, the Grafana sidecar
+    # auto-imports any ConfigMap carrying `grafana_dashboard: "1"`.
+    enabled: false
+    # Namespace to install the dashboard ConfigMap into. Defaults to the
+    # release namespace. Many setups require this to match the Grafana
+    # namespace so the sidecar picks it up.
+    namespace: ""
+    # Label the Grafana sidecar watches for. Stock kube-prometheus-stack uses
+    # `grafana_dashboard`. Set to "" to disable the sidecar label entirely.
+    sidecarLabel: "grafana_dashboard"
+    sidecarLabelValue: "1"
+    # Extra labels applied to the ConfigMap.
+    additionalLabels: {}
+
+# Health probes
+healthProbe:
+  port: 8081
+
+# Leader election (enable for HA)
+leaderElection:
+  enabled: false
+
+# Default budget limit for teams without one specified (USD)
+defaultBudgetLimit: 50.00
+
+# Default timeout for teams without one specified
+defaultTimeout: "4h"
+
+# Log level
+logLevel: info
+
+# Node selector for operator pod
+nodeSelector: {}
+
+# Tolerations for operator pod
+tolerations: []
+
+# Affinity for operator pod
+affinity: {}
+
+# Pod-level security context. Defaults to a hardened profile: non-root user,
+# no privilege escalation, dropped capabilities. Override only when a
+# specific cluster policy requires it.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context. Read-only root filesystem prevents the
+# operator from writing anywhere outside its cache/temp dirs; capabilities
+# are dropped because the operator's only network needs are outbound HTTP
+# to the K8s API.
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Extra args appended to the operator's command line. Use to flip
+# experimental flags without re-building an image.
+# Example: extraArgs: ["--zap-log-level=debug"]
+extraArgs: []
+
+# Extra environment variables merged into the operator-config ConfigMap.
+# Anything you put here is exposed to the operator via envFrom and visible
+# in `kubectl describe configmap <release>-config`.
+# Example: extraEnv: { CUSTOM_FLAG: "value" }
+extraEnv: {}
+
+# Annotations applied to the operator pod template (in addition to the
+# config-checksum annotation the chart manages).
+podAnnotations: {}
+
+# Operator dashboard (web UI). Off by default — installing the chart
+# alone gives you the controller-manager and CRDs; flip dashboard.enabled
+# to deploy the read-only HTMX dashboard alongside it.
+#
+# The dashboard runs in its own pod with its own ServiceAccount. RBAC is
+# scoped to read-only verbs on AgentTeam CRs, Pods, and Pods/log — it
+# never mutates cluster state. Cluster-wide vs single-namespace scope is
+# controlled by `dashboard.namespace` below.
+dashboard:
+  enabled: false
+
+  image:
+    repository: ghcr.io/amcheste/claude-teams-dashboard
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  # Namespace to scope the dashboard to. Empty means cluster-wide (a
+  # ClusterRoleBinding grants read access to every namespace). Set to a
+  # single namespace to restrict via a RoleBinding instead. The same
+  # value is also passed to the dashboard binary as `--namespace=...` so
+  # the UI lists only teams from that namespace.
+  namespace: ""
+
+  serviceAccount:
+    create: true
+    name: claude-teams-dashboard
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # Ingress for exposing the dashboard outside the cluster. Off by
+  # default — most users expose it via `kubectl port-forward` or a
+  # platform-specific ingress they manage themselves.
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: claude-teams.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  # Hardened pod-level security context. Mirrors the operator's defaults.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+
+  # Container-level hardening. Read-only root FS — the dashboard never
+  # writes to disk. Capabilities dropped because outbound HTTP to the K8s
+  # API is the only network need.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# Webhook trigger listener (kagents-trigger). Off by default — flip
+# trigger.enabled to deploy the HTTP listener that converts incoming
+# webhooks into AgentTeamRun resources matched by AgentTeamTrigger CRDs.
+#
+# The listener runs in its own pod with its own ServiceAccount. RBAC
+# scope is cluster-wide on AgentTeamTrigger / AgentTeamRun (matches by
+# CRD path can't be namespace-bounded) and limited to get on Secrets
+# (for HMAC validation). It does not touch AgentTeam resources directly.
+trigger:
+  enabled: false
+
+  image:
+    repository: ghcr.io/amcheste/kagents-trigger
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  serviceAccount:
+    create: true
+    name: kagents-trigger
+
+  service:
+    type: ClusterIP
+    port: 8090
+
+  # Ingress for exposing the trigger to upstream webhook senders.
+  # Off by default — most users put their own ingress (with TLS + auth)
+  # in front and either point it at the ClusterIP service or set their
+  # own ingress.className/host below.
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: triggers.kagents.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}

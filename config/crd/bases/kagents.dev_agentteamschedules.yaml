@@ -1,0 +1,587 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.0
+  name: agentteamschedules.kagents.dev
+spec:
+  group: kagents.dev
+  names:
+    kind: AgentTeamSchedule
+    listKind: AgentTeamScheduleList
+    plural: agentteamschedules
+    singular: agentteamschedule
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.schedule
+      name: Schedule
+      type: string
+    - jsonPath: .status.lastScheduledAt
+      name: Last
+      type: date
+    - jsonPath: .status.nextScheduledAt
+      name: Next
+      type: date
+    - jsonPath: .status.activeRun
+      name: Active
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AgentTeamSchedule creates AgentTeamRun instances on a cron schedule.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              AgentTeamScheduleSpec defines a cron-triggered pattern for creating
+              AgentTeamRun instances. On each fire, the operator creates one
+              AgentTeamRun from the referenced AgentTeamTemplate, parameterized
+              with the schedule's repository/workspace/auth/lead/lifecycle fields.
+              The existing AgentTeamRun controller then turns that Run into an
+              AgentTeam — schedules don't create teams directly, they produce
+              the same Run objects a human would create by hand.
+            properties:
+              auth:
+                description: Auth is forwarded to every created AgentTeamRun.
+                properties:
+                  apiKeySecret:
+                    description: APIKeySecret references a Secret containing ANTHROPIC_API_KEY.
+                    type: string
+                  oauthSecret:
+                    description: OAuthSecret references a Secret containing OAuth
+                      tokens for subscription auth.
+                    type: string
+                type: object
+              historyLimit:
+                description: |-
+                  HistoryLimit caps how many completed Runs are retained in
+                  status.runs[] and on the cluster. Once exceeded, the oldest
+                  completed Runs are deleted. Set to 0 (or omit) to keep all Runs.
+                format: int32
+                minimum: 0
+                type: integer
+              lead:
+                description: Lead configures the team lead for every created AgentTeamRun.
+                properties:
+                  mcpServers:
+                    description: MCPServers configures Model Context Protocol connections
+                      for the lead agent.
+                    items:
+                      description: MCPServerSpec configures a Model Context Protocol
+                        server for an agent.
+                      properties:
+                        credentialsSecret:
+                          description: CredentialsSecret references a Secret containing
+                            an 'apiKey' key for bearer auth.
+                          type: string
+                        name:
+                          description: Name identifies this MCP server in the agent's
+                            config.
+                          type: string
+                        url:
+                          description: URL is the MCP server endpoint.
+                          type: string
+                      required:
+                      - name
+                      - url
+                      type: object
+                    type: array
+                  model:
+                    default: opus
+                    description: Model to use for the team lead.
+                    enum:
+                    - opus
+                    - sonnet
+                    - haiku
+                    type: string
+                  permissionMode:
+                    default: auto-accept
+                    description: PermissionMode controls how the lead handles permission
+                      requests.
+                    enum:
+                    - auto-accept
+                    - plan
+                    - default
+                    type: string
+                  prompt:
+                    description: Prompt is the initial instruction for the team lead.
+                    type: string
+                  resources:
+                    description: Resources defines compute resources for the lead
+                      pod.
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This field depends on the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                  skills:
+                    description: Skills to mount into .claude/skills/ for the lead
+                      agent.
+                    items:
+                      description: SkillSpec defines a Claude Code skill to mount
+                        into an agent pod.
+                      properties:
+                        name:
+                          description: Name is the skill directory name under .claude/skills/.
+                          type: string
+                        source:
+                          description: Source identifies where to load the skill from.
+                          properties:
+                            configMap:
+                              description: |-
+                                ConfigMap references a ConfigMap in the same namespace.
+                                Each key in the ConfigMap becomes a file in the skill directory.
+                              type: string
+                            oci:
+                              description: |-
+                                OCI is an OCI artifact reference containing the skill files
+                                (e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs
+                                an `oras pull` init container at pod startup to materialize the
+                                skill onto an emptyDir; the main container then sees the files
+                                under ~/.claude/skills/{name}/. Private registries are supported
+                                via spec.imagePullSecrets.
+
+                                Re-pull semantics: the init container runs once per pod start,
+                                so the artifact is re-pulled on every pod create. There is no
+                                shared cache between pods — operators who want one should pin
+                                to immutable digests so the registry can short-circuit identical
+                                pulls cheaply.
+                              type: string
+                          type: object
+                      required:
+                      - name
+                      - source
+                      type: object
+                      x-kubernetes-validations:
+                      - message: skill source must set exactly one of configMap or
+                          oci
+                        rule: '(has(self.source.configMap) ? 1 : 0) + (has(self.source.oci)
+                          ? 1 : 0) == 1'
+                    type: array
+                required:
+                - prompt
+                type: object
+              lifecycle:
+                description: Lifecycle overrides forwarded to every created AgentTeamRun.
+                properties:
+                  approvalGates:
+                    description: |-
+                      ApprovalGates pause execution before specified events until human approval is recorded.
+                      Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true
+                    items:
+                      description: |-
+                        ApprovalGateSpec pauses execution before a named event until human approval is recorded.
+                        Approval is granted by adding the annotation approved.kagents.dev/{event}=true to the AgentTeam.
+                      properties:
+                        channel:
+                          default: none
+                          description: Channel is how the approval request notification
+                            is sent.
+                          enum:
+                          - webhook
+                          - none
+                          type: string
+                        event:
+                          description: Event is the gate identifier. Use "spawn-{teammate-name}"
+                            to gate spawning a specific teammate.
+                          type: string
+                        webhookUrl:
+                          description: WebhookURL to POST when this gate is triggered
+                            (used when channel is "webhook").
+                          type: string
+                      required:
+                      - event
+                      type: object
+                    type: array
+                  budgetLimit:
+                    description: BudgetLimit is the maximum API spend in USD before
+                      the team is terminated (e.g. "10.00").
+                    type: string
+                  consolidatedBranchTemplate:
+                    description: |-
+                      ConsolidatedBranchTemplate is a Go template rendered to produce the
+                      branch name pushed by OnComplete=push-branch. Available variables:
+                      .TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".
+                    type: string
+                  delivery:
+                    description: |-
+                      Delivery is the list of artifact delivery targets fired when
+                      OnComplete=deliver. Each target is dispatched independently;
+                      per-target success/failure is recorded in status.delivery[].
+                      Delivery failure is best-effort — the team is not rolled back to
+                      Failed if a target rejects the request.
+                    items:
+                      description: |-
+                        DeliveryTarget describes one artifact delivery destination fired when
+                        OnComplete=deliver. The Type discriminator selects which fields are
+                        meaningful — webhook + slack are functional in v0.8.0; email and
+                        google-drive are accepted at the API level and dispatched to senders
+                        that currently return a "not implemented" error recorded in
+                        status.delivery[].
+
+                        Across all types the operator never persists credentials itself; the
+                        sender pulls them from CredentialsSecret at dispatch time so a
+                        compromised operator pod can't enumerate Slack tokens / SMTP
+                        passwords / Drive service-account keys at rest.
+                      properties:
+                        artifactPath:
+                          description: |-
+                            ArtifactPath is the file path within the team's output workspace
+                            (typically /workspace/output) to attach to or send as the
+                            delivery body. Optional for delivery types that carry their
+                            message inline (e.g. a plain Slack notification with no file).
+                          type: string
+                        attachmentPath:
+                          description: |-
+                            AttachmentPath is a file path within the team's output workspace
+                            to attach to the email delivery. Equivalent to ArtifactPath but
+                            kept distinct because some emails attach + reference a separate
+                            artifact in the body.
+                          type: string
+                        channel:
+                          description: |-
+                            Channel is the destination for the slack delivery type
+                            (e.g. "#reports"). The slack sender reads
+                            CredentialsSecret["slack-webhook-url"] to know where to post.
+                          type: string
+                        credentialsSecret:
+                          description: |-
+                            CredentialsSecret names a Secret in the team's namespace carrying
+                            authentication for this target. Expected keys per type:
+
+                              - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL
+                              - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"
+                              - google-drive: "service-account.json"
+
+                            Not required for webhook; the URL is in the spec.
+                          type: string
+                        folder:
+                          description: |-
+                            Folder is the destination folder for the google-drive delivery
+                            type.
+                          type: string
+                        message:
+                          description: |-
+                            Message is the human-readable text that accompanies the delivery
+                            (Slack message text, webhook notes, email body lead-in).
+                          type: string
+                        subject:
+                          description: Subject is the message subject for the email
+                            delivery type.
+                          type: string
+                        to:
+                          description: To is the recipient list for the email delivery
+                            type.
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type names the delivery backend.
+                          enum:
+                          - webhook
+                          - slack
+                          - email
+                          - google-drive
+                          type: string
+                        url:
+                          description: URL is the destination for the webhook delivery
+                            type.
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    type: array
+                  gitCredentialsSecret:
+                    description: |-
+                      GitCredentialsSecret names a Secret in the team's namespace carrying git
+                      push credentials. The Secret must contain either 'ssh-privatekey' or
+                      'token'. Used by OnComplete=push-branch (and OnComplete=create-pr when
+                      push-branch runs ahead of it). Falls back to Spec.Repository.CredentialsSecret
+                      when unset, so teams that already configured clone credentials with push
+                      scope don't need to duplicate.
+                    type: string
+                  githubTokenSecret:
+                    description: |-
+                      GitHubTokenSecret names a Secret in the team's namespace carrying a
+                      GitHub token under the key GITHUB_TOKEN. Used by OnComplete=create-pr
+                      (and OnComplete=push-branch, once implemented) to authenticate against
+                      the GitHub REST API.
+                    type: string
+                  maxRestarts:
+                    default: 3
+                    description: |-
+                      MaxRestarts bounds how many times each teammate pod may be re-spawned
+                      after a Failed phase before the team itself is marked Failed. The lead
+                      pod is not subject to this limit; a lead crash always fails the team.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  onComplete:
+                    default: notify
+                    description: OnComplete determines what happens when the team
+                      finishes.
+                    enum:
+                    - create-pr
+                    - push-branch
+                    - notify
+                    - deliver
+                    - none
+                    type: string
+                  prTitleTemplate:
+                    description: |-
+                      PRTitleTemplate overrides the title template used by OnComplete=create-pr.
+                      Available variables: .TeamName, .Namespace. When empty, falls back to
+                      Spec.Lifecycle.PullRequest.TitleTemplate, then to the default
+                      "claude-teams: {{.TeamName}}".
+                    type: string
+                  pullRequest:
+                    description: PullRequest configures PR creation when onComplete
+                      is "create-pr".
+                    properties:
+                      labels:
+                        description: Labels to apply to the PR.
+                        items:
+                          type: string
+                        type: array
+                      reviewers:
+                        description: Reviewers to request on the PR.
+                        items:
+                          type: string
+                        type: array
+                      targetBranch:
+                        default: main
+                        description: TargetBranch is the branch to open the PR against.
+                        type: string
+                      titleTemplate:
+                        description: |-
+                          TitleTemplate is a Go template for the PR title.
+                          Available variables: .TeamName, .Namespace
+                        type: string
+                    type: object
+                  timeout:
+                    default: 4h
+                    description: Timeout is the maximum duration the team can run
+                      (e.g. "4h", "30m").
+                    type: string
+                type: object
+              repository:
+                description: Repository overrides the repository for each Run (coding
+                  mode).
+                properties:
+                  branch:
+                    default: main
+                    description: Branch to clone and work from.
+                    type: string
+                  credentialsSecret:
+                    description: |-
+                      CredentialsSecret references a Secret containing git credentials.
+                      The secret should contain either 'ssh-privatekey' or 'token'.
+                    type: string
+                  url:
+                    description: URL is the git clone URL.
+                    type: string
+                  worktreeStrategy:
+                    default: per-teammate
+                    description: WorktreeStrategy determines how git worktrees are
+                      managed.
+                    enum:
+                    - per-teammate
+                    - shared
+                    type: string
+                required:
+                - url
+                type: object
+              schedule:
+                description: |-
+                  Schedule is a five-field cron expression in the operator's local
+                  time zone (e.g. "0 6 * * MON" for Monday 06:00). Parsed by
+                  robfig/cron/v3 with the standard parser.
+                type: string
+              templateRef:
+                description: TemplateRef names the AgentTeamTemplate to instantiate
+                  on each fire.
+                properties:
+                  name:
+                    description: Name of the AgentTeamTemplate in the same namespace.
+                    type: string
+                required:
+                - name
+                type: object
+              workspace:
+                description: Workspace overrides the workspace for each Run (Cowork
+                  mode).
+                properties:
+                  inputs:
+                    description: Inputs are read-only volumes mounted into all agent
+                      pods.
+                    items:
+                      description: WorkspaceInputSpec defines a read-only input mounted
+                        into the agent pod.
+                      properties:
+                        configMap:
+                          description: ConfigMap references a ConfigMap to mount as
+                            a directory.
+                          type: string
+                        mountPath:
+                          description: MountPath is where to mount this input inside
+                            the container.
+                          type: string
+                        pvc:
+                          description: PVC references an existing PersistentVolumeClaim
+                            to mount read-only.
+                          type: string
+                      required:
+                      - mountPath
+                      type: object
+                    type: array
+                  output:
+                    description: Output configures the shared writable output volume.
+                    properties:
+                      mountPath:
+                        default: /workspace/output
+                        description: MountPath inside the container where the output
+                          volume is mounted.
+                        type: string
+                      pvc:
+                        description: PVC is the name of an existing PVC to use. If
+                          empty, the operator creates one named "{team}-output".
+                        type: string
+                      size:
+                        default: 5Gi
+                        description: Size of the auto-created PVC.
+                        type: string
+                      storageClass:
+                        description: StorageClass for the auto-created PVC. Defaults
+                          to "nfs".
+                        type: string
+                    type: object
+                type: object
+            required:
+            - auth
+            - lead
+            - schedule
+            - templateRef
+            type: object
+          status:
+            description: AgentTeamScheduleStatus reports cron progress and Run history.
+            properties:
+              activeRun:
+                description: |-
+                  ActiveRun names the in-flight AgentTeamRun, if any. Empty when no
+                  run is currently executing.
+                type: string
+              lastScheduledAt:
+                description: |-
+                  LastScheduledAt is when the most recent fire occurred (the schedule
+                  time that triggered Run creation, not the wall-clock reconcile time).
+                format: date-time
+                type: string
+              nextScheduledAt:
+                description: |-
+                  NextScheduledAt is the time of the next scheduled fire as computed
+                  from the cron expression.
+                format: date-time
+                type: string
+              runs:
+                description: |-
+                  Runs is the recent history of Runs this schedule created. Truncated
+                  to HistoryLimit (oldest entries dropped first).
+                items:
+                  description: ScheduledRunStatus records a single fire's bookkeeping.
+                  properties:
+                    name:
+                      description: Name is the AgentTeamRun resource name.
+                      type: string
+                    phase:
+                      description: Phase mirrors the underlying AgentTeamRun's last
+                        observed status.phase.
+                      type: string
+                    scheduledAt:
+                      description: ScheduledAt is the cron-computed time this run
+                        was triggered for.
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - scheduledAt
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

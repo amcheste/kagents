@@ -9,7 +9,7 @@ hide:
 **Run Claude Code Agent Teams as a Kubernetes operator.**
 
 [Get started in 5 minutes :material-rocket-launch:](tutorials/getting-started.md){ .md-button .md-button--primary }
-[View on GitHub :material-github:](https://github.com/amcheste/claude-teams-operator){ .md-button }
+[View on GitHub :material-github:](https://github.com/amcheste/kagents){ .md-button }
 
 ---
 
@@ -17,7 +17,7 @@ hide:
 
 ```bash
 helm install kagents \
-  oci://ghcr.io/amcheste/charts/claude-teams-operator \
+  oci://ghcr.io/amcheste/charts/kagents \
   --namespace claude-teams-system --create-namespace
 ```
 
@@ -35,7 +35,7 @@ helm install kagents \
 
     ---
 
-    One `AgentTeam` CRD declares roles, budget, quality gates, and coordination topology. `AgentTeamTemplate` lets you reuse common team patterns. "3-agent security review," "fullstack feature team". With one-line instantiation.
+    One `AgentTeam` CRD declares roles, budget, quality gates, and coordination topology. `AgentTeamTemplate` lets you reuse common team patterns ("3-agent security review", "fullstack feature team"), each instantiable in one line.
 
 -   :material-kubernetes:{ .lg .middle } **K8s as coordination fabric**
 
@@ -81,7 +81,7 @@ helm install kagents \
 
     Apache 2.0. Issues, PRs, and Discussions welcome.
 
-    [github.com/amcheste/claude-teams-operator](https://github.com/amcheste/claude-teams-operator)
+    [github.com/amcheste/kagents](https://github.com/amcheste/kagents)
 
 -   :material-presentation:{ .lg .middle } **Talk**
 

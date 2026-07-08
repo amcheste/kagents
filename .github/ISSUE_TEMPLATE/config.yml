@@ -5,11 +5,11 @@ blank_issues_enabled: false
 
 contact_links:
   - name: Question or discussion
-    url: https://github.com/amcheste/claude-teams-operator/discussions
+    url: https://github.com/amcheste/kagents/discussions
     about: For general questions, design discussions, or help requests, please open a Discussion instead of an issue.
   - name: Documentation site
     url: https://kagents.dev
     about: Tutorials, how-to guides, concept pages, and CRD reference are at kagents.dev.
   - name: Security vulnerability
-    url: https://github.com/amcheste/claude-teams-operator/security/advisories/new
+    url: https://github.com/amcheste/kagents/security/advisories/new
     about: Report security vulnerabilities privately via GitHub Security Advisories — see SECURITY.md.

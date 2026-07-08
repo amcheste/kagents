@@ -1,13 +1,13 @@
 site_name: kagents
 site_description: Run Claude Code Agent Teams as a Kubernetes operator
 site_url: https://kagents.dev
-site_author: CAM Labs LLC
+site_author: Alan Chester
 
-repo_name: amcheste/claude-teams-operator
-repo_url: https://github.com/amcheste/claude-teams-operator
+repo_name: amcheste/kagents
+repo_url: https://github.com/amcheste/kagents
 edit_uri: edit/main/docs/
 
-copyright: Copyright &copy; 2026 CAM Labs LLC
+copyright: Copyright &copy; 2026 Alan Chester
 
 # Files inside docs/ that aren't part of the public site.
 # `helm-values.md` and `cfp/` predate the docs site and link to repo
@@ -22,6 +22,11 @@ exclude_docs: |
 
 theme:
   name: material
+  # No logo: the personal alanchester-brand wordmark belongs on
+  # alanchester.com, not on downstream-repo docs sites. The site_name
+  # ("kagents") fills the left of the header on its own. The favicon
+  # uses the monogram, which is shared family-brand identity.
+  favicon: assets/favicon.svg
   features:
     - navigation.instant
     - navigation.tracking
@@ -33,26 +38,45 @@ theme:
     - content.code.copy
     - content.action.edit
     - toc.follow
+  # Palette names ("black", "white") are Material's named slots. The
+  # actual colors come from docs/stylesheets/brand.css, which maps
+  # Material's --md-* tokens onto the alanchester-brand --ac-* tokens.
+  # We pick "black" + "white" rather than "indigo" so Material's
+  # built-in CSS doesn't tint anything on the default theme path.
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: black
+      accent: green
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: black
+      accent: green
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   font:
-    text: Inter
-    code: JetBrains Mono
+    text: IBM Plex Sans
+    code: IBM Plex Mono
   icon:
     repo: fontawesome/brands/github
+
+# The brand override stylesheets are applied after Material's own CSS
+# so token mappings win at the cascade level. Order matters: tokens
+# first (so brand.css can reference them via var()), then brand.css.
+extra_css:
+  - stylesheets/ac-colors.css
+  - stylesheets/ac-typography.css
+  - stylesheets/brand.css
+
+# JS hook for the brand drawer pattern. Material's drawer is scoped to
+# viewport <76.25em in both its CSS and its JS, so we drive the
+# slide-out from a separate data-attribute hook above that breakpoint.
+extra_javascript:
+  - javascripts/drawer.js
 
 plugins:
   - search
@@ -69,6 +93,13 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
+  # pymdownx.emoji wired to Material's icon index resolves the
+  # `:material-*:` shortcodes scattered through docs/index.md (and
+  # any future page) into inline SVG icons. Without this, the
+  # shortcodes render as literal `:material-protocol:` text.
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -88,7 +119,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/amcheste/claude-teams-operator
+      link: https://github.com/amcheste/kagents
 
 # Diátaxis nav: Tutorials (learn) / How-to (solve) / Reference (look up) /
 # Explanation (understand). Section index pages exist as placeholders so
@@ -108,6 +139,8 @@ nav:
           - Expose the dashboard: how-to/operate/expose-dashboard.md
           - Configure shared storage: how-to/operate/shared-storage.md
           - Set budget alerts: how-to/operate/budget-alerts.md
+      - Author skills:
+          - Package and publish skills: how-to/skill-authoring.md
   - Reference:
       - reference/index.md
       - API reference: reference/api/index.md

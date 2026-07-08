@@ -41,7 +41,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 var (

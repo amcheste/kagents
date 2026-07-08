@@ -21,7 +21,7 @@ This Code of Conduct applies within all project spaces, including:
 If you experience or witness a violation, report it confidentially:
 
 - **Email:** amcheste@gmail.com
-- **GitHub:** open a [private security advisory](https://github.com/amcheste/claude-teams-operator/security/advisories/new) and tag it as a Code of Conduct concern in the title
+- **GitHub:** open a [private security advisory](https://github.com/amcheste/kagents/security/advisories/new) and tag it as a Code of Conduct concern in the title
 
 You will receive an acknowledgement within **7 days** and a resolution or status update within **30 days**. All reports are handled confidentially. Reporters will not be retaliated against.
 

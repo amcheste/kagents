@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
 )
 
 // dashboardScheme registers the types the dashboard handlers need to
@@ -180,10 +180,10 @@ func TestTeamDetail_RejectsNonGet(t *testing.T) {
 func TestRouting_BadDepthReturns404(t *testing.T) {
 	srv := newServer()
 	cases := []string{
-		"/api/teams/ns1",                                 // 1 segment after prefix — too short
-		"/api/teams/ns1/alpha/extra",                     // 3 segments — not the logs shape
-		"/api/teams/ns1/alpha/notlogs/agent",             // wrong subresource keyword
-		"/api/teams/ns1/alpha/logs/agent/extra",          // 5 segments — too deep
+		"/api/teams/ns1",                        // 1 segment after prefix — too short
+		"/api/teams/ns1/alpha/extra",            // 3 segments — not the logs shape
+		"/api/teams/ns1/alpha/notlogs/agent",    // wrong subresource keyword
+		"/api/teams/ns1/alpha/logs/agent/extra", // 5 segments — too deep
 	}
 	for _, c := range cases {
 		rec := do(t, srv, http.MethodGet, c)
@@ -220,4 +220,3 @@ func TestWriteError_SerializesAsJSON(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&body))
 	assert.Equal(t, "nope", body["error"])
 }
-

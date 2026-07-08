@@ -20,8 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	claudev1alpha1 "github.com/amcheste/claude-teams-operator/api/v1alpha1"
-	"github.com/amcheste/claude-teams-operator/internal/controller"
+	claudev1alpha1 "github.com/amcheste/kagents/api/v1alpha1"
+	"github.com/amcheste/kagents/internal/controller"
 )
 
 var (

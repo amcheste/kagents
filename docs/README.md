@@ -13,7 +13,7 @@ Edits to any file under `docs/` or `mkdocs.yml` hot-reload in the browser.
 
 ## Deploying
 
-A push to `main` that touches `docs/`, `mkdocs.yml`, or `.github/workflows/docs.yml` triggers `Deploy Docs`, which builds the site with `mkdocs gh-deploy` and force-pushes the rendered HTML to the `gh-pages` branch. GitHub Pages serves it at https://kagents.dev (and at `amcheste.github.io/claude-teams-operator` until the custom domain DNS resolves).
+A push to `main` that touches `docs/`, `mkdocs.yml`, or `.github/workflows/docs.yml` triggers `Deploy Docs`, which builds the site with `mkdocs gh-deploy` and force-pushes the rendered HTML to the `gh-pages` branch. GitHub Pages serves it at https://kagents.dev (and at `amcheste.github.io/kagents` until the custom domain DNS resolves).
 
 ## Structure
 
