@@ -1,0 +1,1453 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Run Claude Code Agent Teams as a Kubernetes operator">
+      
+      
+        <meta name="author" content="Alan Chester">
+      
+      
+        <link rel="canonical" href="https://kagents.dev/knowledge-work-design/">
+      
+      
+      
+      
+      <link rel="icon" href="../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
+    
+    
+      
+        <title>Technical Design — kagents Knowledge Work Orchestrator - kagents</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.a40c8224.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:300,300i,400,400i,700,700i%7CIBM+Plex+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"IBM Plex Sans";--md-code-font:"IBM Plex Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/ac-colors.css">
+    
+      <link rel="stylesheet" href="../stylesheets/ac-typography.css">
+    
+      <link rel="stylesheet" href="../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#technical-design-kagents-knowledge-work-orchestrator" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="kagents" class="md-header__button md-logo" aria-label="kagents" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            kagents
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Technical Design — kagents Knowledge Work Orchestrator
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/amcheste/kagents" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amcheste/kagents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="kagents" class="md-nav__button md-logo" aria-label="kagents" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    kagents
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/amcheste/kagents" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amcheste/kagents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-to guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Install
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            Install
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/install/eks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Amazon EKS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/install/gke/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Google GKE
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/install/aks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Azure AKS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Operate
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            Operate
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/operate/expose-dashboard/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Expose the dashboard
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/operate/shared-storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configure shared storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/operate/budget-alerts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Set budget alerts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Author skills
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            Author skills
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/skill-authoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Package and publish skills
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Explanation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/resources/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Resource model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/coordination/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Coordination protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope-and-reading-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      Scope and reading order
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/amcheste/kagents/edit/main/docs/knowledge-work-design.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="technical-design-kagents-knowledge-work-orchestrator">Technical Design — kagents Knowledge Work Orchestrator<a class="headerlink" href="#technical-design-kagents-knowledge-work-orchestrator" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status:</strong> Draft for review
+<strong>Audience:</strong> implementers of the rebrand and the knowledge-work features
+<strong>Companion docs:</strong> <a href="../product-vision/">Product Vision</a> · <a href="../knowledge-work-prd/">PRD</a></p>
+</blockquote>
+<h2 id="scope-and-reading-order">Scope and reading order<a class="headerlink" href="#scope-and-reading-order" title="Permanent link">&para;</a></h2>
+<p>This document specifies two bodies of work, in the order they execute:</p>
+<ul>
+<li><strong>Part I — Rebrand &amp; harness abstraction.</strong> Neutralize the Claude-specific identity (module path, API group, brand) and introduce a thin harness-adapter seam. Lands <em>first</em> so everything below is born under the <code>kagents.dev</code> API group. Maps to the <strong>kagents rebrand &amp; harness abstraction</strong> milestone.</li>
+<li><strong>Part II — Knowledge-work CRD architecture.</strong> Output routing, pipelines, scheduling, event triggers, result delivery, OCI skills, and pipeline-aware observability. Maps to the <strong>Knowledge Work Orchestrator</strong> milestone.</li>
+</ul>
+<p>Read <a href="../ARCHITECTURE.md">ARCHITECTURE.md</a> first for the current operator design (phases, PVC layout, coordination protocol). This document describes the <em>deltas</em> from that baseline.</p>
+<p>A guiding constraint throughout: <strong>the operator already does not speak the agent coordination protocol</strong> — it only provisions the shared PVC and lets the agent harness manage mailboxes/tasks. That existing separation is what makes both the harness abstraction and the knowledge-work features tractable without a rewrite.</p>
+<hr />
+<h1 id="part-i-rebrand-harness-abstraction">Part I — Rebrand &amp; harness abstraction<a class="headerlink" href="#part-i-rebrand-harness-abstraction" title="Permanent link">&para;</a></h1>
+<h2 id="i1-the-harness-adapter-seam">I.1 The harness adapter seam<a class="headerlink" href="#i1-the-harness-adapter-seam" title="Permanent link">&para;</a></h2>
+<h3 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h3>
+<p>Make the agent runtime an explicit, swappable seam so that "kagents runs Claude Code" becomes "kagents runs Claude Code <em>today</em>, via one adapter." Do this <strong>without</strong> building a plugin SPI, registry, or second adapter — those are deferred until a real second harness exists (the YAGNI guardrail from the <a href="../product-vision/#long-term-direction-agnostic-to-the-agent-harness">vision</a>).</p>
+<h3 id="where-the-boundary-goes">Where the boundary goes<a class="headerlink" href="#where-the-boundary-goes" title="Permanent link">&para;</a></h3>
+<p>Today the Claude coupling is concentrated in a small surface. The seam formalizes it:</p>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Today</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Runner image</td>
+<td>hardcoded <code>claude-code-runner</code></td>
+<td>provided by the selected harness adapter</td>
+</tr>
+<tr>
+<td>Pod env / launch</td>
+<td><code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code>, <code>~/.claude/teams</code> + <code>~/.claude/tasks</code> symlinks in <code>entrypoint.sh</code></td>
+<td>the claude-code adapter contributes these; the operator just applies what the adapter returns</td>
+</tr>
+<tr>
+<td>Valid models</td>
+<td><code>opus\|sonnet\|haiku</code> enum in the CRD</td>
+<td>adapter declares its model set; CRD field becomes a free-ish string validated by the adapter</td>
+</tr>
+<tr>
+<td>Budget rates</td>
+<td>hardcoded rate table in <code>internal/budget</code></td>
+<td>adapter supplies per-model rates</td>
+</tr>
+<tr>
+<td>Everything else (PVCs, Jobs, RBAC, scheduling, lifecycle, routing, delivery)</td>
+<td>operator core</td>
+<td><strong>unchanged — already harness-neutral</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-interface-internal-thin">The interface (internal, thin)<a class="headerlink" href="#the-interface-internal-thin" title="Permanent link">&para;</a></h3>
+<p>A single internal Go interface, consulted by the pod builder. Illustrative shape:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// internal/harness/harness.go</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Harness</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="c1">// Name is the spec.harness enum value, e.g. &quot;claude-code&quot;.</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">Name</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="c1">// RunnerImage returns the default image for this harness (overridable).</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">RunnerImage</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="c1">// Decorate mutates a teammate/lead PodSpec to add the harness-specific</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="c1">// env, volume mounts, and command needed for the coordination protocol.</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Decorate</span><span class="p">(</span><span class="nx">pod</span><span class="w"> </span><span class="o">*</span><span class="nx">corev1</span><span class="p">.</span><span class="nx">PodSpec</span><span class="p">,</span><span class="w"> </span><span class="nx">role</span><span class="w"> </span><span class="nx">AgentRole</span><span class="p">,</span><span class="w"> </span><span class="nx">team</span><span class="w"> </span><span class="o">*</span><span class="nx">AgentTeam</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="c1">// Models returns the valid model identifiers and their budget rates.</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">Models</span><span class="p">()</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="nx">ModelRate</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><code>spec.harness</code> (default <code>claude-code</code>) selects the adapter from a small static map in <code>cmd/manager</code>. <strong>No dynamic registry, no out-of-tree plugins</strong> in this phase. Adding a second harness later means: implement the interface, add one map entry — the seam is in the right place to make that contained.</p>
+<h3 id="crd-change">CRD change<a class="headerlink" href="#crd-change" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">harness</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-code</span><span class="w">   </span><span class="c1"># enum, default &quot;claude-code&quot;; omitted == claude-code</span>
+</span></code></pre></div>
+<p>Backward compatible: existing CRs omit it and get identical behavior. This is the <em>only</em> API addition in Part I — everything else in Part I is renames and internal refactoring.</p>
+<h3 id="validation-note">Validation note<a class="headerlink" href="#validation-note" title="Permanent link">&para;</a></h3>
+<p>Use a CEL validation rule (<code>x-kubernetes-validations</code>) on the model field to defer model-set validation to runtime where the adapter is known, rather than a static enum. (See <a href="#i4-no-admission-webhooks-use-cel">I.4</a> on why we avoid admission webhooks.)</p>
+<h2 id="i2-module-path-migration">I.2 Module path migration<a class="headerlink" href="#i2-module-path-migration" title="Permanent link">&para;</a></h2>
+<p><code>github.com/amcheste/claude-teams-operator</code> → <code>github.com/amcheste/kagents</code>.</p>
+<ul>
+<li>Mechanical: <code>go.mod</code> module directive + every internal import across <code>api/</code>, <code>cmd/</code>, <code>internal/</code>, <code>test/</code>; Dockerfile build targets; Makefile; CI workflow refs.</li>
+<li>Regenerate: <code>make generate manifests</code> (regenerates deepcopy headers and CRD paths).</li>
+<li>Atomic PR — the module path cannot be half-migrated. Land/close open PRs first.</li>
+<li><strong>Depends on the repo rename</strong> so the module path matches the canonical repo location.</li>
+</ul>
+<h2 id="i3-api-group-migration-clean-break">I.3 API group migration — clean break<a class="headerlink" href="#i3-api-group-migration-clean-break" title="Permanent link">&para;</a></h2>
+<p><code>claude.amcheste.io/v1alpha1</code> → <code>kagents.dev/v1alpha1</code>. Version stays <code>v1alpha1</code>; only the group changes. Using the owned domain as the group is the K8s convention (<code>cert-manager.io</code>, <code>argoproj.io</code>).</p>
+<p><strong>Clean break</strong> (decided): no conversion webhook. Acceptable pre-1.0 with effectively no external installs to protect.</p>
+<p>Surface to change:
+- <code>+groupName=kagents.dev</code> marker + <code>api/v1alpha1/groupversion_info.go</code>
+- Regenerated CRDs (<code>config/crd/bases/</code>, <code>charts/*/crds/</code>), deepcopy, RBAC role
+- CRD resource names change implicitly: <code>agentteams.claude.amcheste.io</code> → <code>agentteams.kagents.dev</code>
+- <strong>Annotation keys</strong> derived from the group: <code>approved.claude.amcheste.io/{event}</code> → <code>approved.kagents.dev/{event}</code> (audit <code>internal/controller</code> + ARCHITECTURE.md §Approval Gates)
+- All <code>apiVersion:</code> in <code>config/samples/</code>, docs, tutorials, README
+- <code>docs/reference/api/</code> regenerated</p>
+<h3 id="migrationmd-new-user-facing"><code>MIGRATION.md</code> (new, user-facing)<a class="headerlink" href="#migrationmd-new-user-facing" title="Permanent link">&para;</a></h3>
+<p>Because it's a clean break, any existing install migrates by re-creating resources:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># 1. Export any in-flight CRs you want to keep (optional; re-apply with new apiVersion)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>agentteams,agentteamtemplates,agentteamruns<span class="w"> </span>-A<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span>&gt;<span class="w"> </span>teams-backup.yaml
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># 2. Remove the old CRDs (cascades to CRs) and operator</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>kagents
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>crd<span class="w"> </span>agentteams.claude.amcheste.io<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>agentteamtemplates.claude.amcheste.io<span class="w"> </span>agentteamruns.claude.amcheste.io
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># 3. Install the kagents.dev build</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>helm<span class="w"> </span>install<span class="w"> </span>kagents<span class="w"> </span>./charts/kagents
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># 4. Re-apply CRs after find/replacing apiVersion: claude.amcheste.io/v1alpha1</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1">#    → apiVersion: kagents.dev/v1alpha1</span>
+</span></code></pre></div>
+<p>MIGRATION.md states plainly: this is a one-time breaking change made deliberately while the project is pre-1.0; no automated data migration is provided.</p>
+<h2 id="i4-no-admission-webhooks-use-cel">I.4 No admission webhooks — use CEL<a class="headerlink" href="#i4-no-admission-webhooks-use-cel" title="Permanent link">&para;</a></h2>
+<p>Several knowledge-work features need cross-field validation (e.g. "<code>pipeline</code> and flat <code>dependsOn</code> are mutually exclusive"). The project currently ships <strong>no admission webhooks</strong> by design (no webhook server, no cert wiring). We keep it that way and use <strong>CRD CEL validation rules</strong> (<code>x-kubernetes-validations</code>, GA since k8s 1.25; we're on 0.36):</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// +kubebuilder:validation:XValidation:rule=&quot;!(has(self.pipeline) &amp;&amp; self.teammates.exists(t, has(t.dependsOn)))&quot;,message=&quot;spec.pipeline and spec.teammates[].dependsOn are mutually exclusive&quot;</span>
+</span></code></pre></div>
+<p>This keeps the no-webhook architecture, avoids cert-manager/Service plumbing, and pushes validation into the API server. Any AMC issue text that says "validation webhook" should be read as "CEL validation rule."</p>
+<h2 id="i5-backward-compatibility-summary">I.5 Backward compatibility summary<a class="headerlink" href="#i5-backward-compatibility-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Breaks existing CRs?</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Module path</td>
+<td>No (internal only)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>API group (clean break)</td>
+<td><strong>Yes</strong> — must re-apply under new group</td>
+<td>MIGRATION.md; pre-1.0, ~no external users</td>
+</tr>
+<tr>
+<td><code>spec.harness</code> added</td>
+<td>No — defaults to <code>claude-code</code></td>
+<td>Omitted == current behavior</td>
+</tr>
+<tr>
+<td>Image/chart renames</td>
+<td>Deploy-time only</td>
+<td>New tags + Helm value defaults</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="part-ii-knowledge-work-crd-architecture">Part II — Knowledge-work CRD architecture<a class="headerlink" href="#part-ii-knowledge-work-crd-architecture" title="Permanent link">&para;</a></h1>
+<p>All examples below use the post-rebrand <code>kagents.dev/v1alpha1</code> group. These features are designed <em>together</em> so they compose; <a href="#ii8-how-the-pieces-compose">II.8</a> is the load-bearing section.</p>
+<h2 id="ii1-output-routing">II.1 Output routing<a class="headerlink" href="#ii1-output-routing" title="Permanent link">&para;</a></h2>
+<p>Structured artifact handoff: a teammate's declared outputs become a downstream teammate's mounted inputs.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">teammates</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">researcher</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Analyze</span><span class="nv"> </span><span class="s">data;</span><span class="nv"> </span><span class="s">write</span><span class="nv"> </span><span class="s">findings</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">/workspace/output/findings.md&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/workspace/output/findings.md</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Research findings summary</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">report-writer</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Read</span><span class="nv"> </span><span class="s">/workspace/stage/research/findings.md;</span><span class="nv"> </span><span class="s">produce</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">Q3</span><span class="nv"> </span><span class="s">report&quot;</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">researcher</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="nt">artifact</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">findings.md</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">        </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/workspace/stage/research/</span>
+</span></code></pre></div>
+<p><strong>Types:</strong> <code>OutputSpec{path, description}</code>, <code>InputSpec{from, artifact, mountPath}</code> on <code>TeammateSpec</code>; <code>ArtifactStatus{name, producedBy, size, producedAt}</code> on status.</p>
+<p><strong>Operator behavior</strong> on teammate pod <code>Succeeded</code>:
+1. Verify declared <code>outputs[].path</code> exist on the output PVC; missing files → teammate error status.
+2. Record <code>status.artifacts</code>.
+3. For each downstream teammate whose <code>inputs[].from</code> matches, make artifacts available at <code>mountPath</code> (copy within the shared output PVC; see design note).
+4. Spawn downstream teammate when its inputs are satisfied <strong>and</strong> its ordering constraint is met.</p>
+<p><strong>Design note — how artifacts move:</strong> all agents already share the output PVC (RWX). "Routing" is therefore a <em>copy/symlink within one volume</em>, not a cross-volume transfer — cheap, no new volume plumbing. The operator runs the copy itself (it has no need to speak the agent protocol to move files). For coding mode, the analogous handoff is the existing git-worktree/branch mechanism; output routing is a Cowork-mode concern.</p>
+<h2 id="ii2-pipeline-stages">II.2 Pipeline stages<a class="headerlink" href="#ii2-pipeline-stages" title="Permanent link">&para;</a></h2>
+<p><code>spec.pipeline</code> models multi-stage workflows with explicit fan-out/merge, as an alternative to flat per-teammate <code>dependsOn</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">pipeline</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">stages</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="nt">teammates</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">data-analyst</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">analysis</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="nt">teammates</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">market-analyst</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">financial-analyst</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">competitive-analyst</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nt">dependsOn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">research</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nt">fan</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">parallel</span><span class="w">          </span><span class="c1"># all start once dependsOn stages complete (default)</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">synthesis</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="nt">teammates</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">report-writer</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">dependsOn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">analysis</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nt">fan</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">merge</span><span class="w">             </span><span class="c1"># starts only after ALL teammates in dependsOn stages Succeed</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">distribution</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="nt">teammates</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">email-drafter</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="nt">dependsOn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">synthesis</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="nt">approvalRequired</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># stage-level approval gate (reuses annotation mechanism)</span>
+</span></code></pre></div>
+<p><strong>Types:</strong> <code>PipelineSpec{stages []StageSpec}</code>, <code>StageSpec{name, teammates, dependsOn, fan, approvalRequired}</code> on spec; <code>PipelineStatus{currentStage, stagesCompleted, stagesTotal, stages []StageStatus}</code> on status.</p>
+<p><strong>Relationship to existing <code>dependsOn</code>:</strong> pipeline is <em>stage-level</em> ordering; the existing per-teammate <code>dependsOn</code> is <em>teammate-level</em>. They're mutually exclusive (CEL rule, <a href="#i4-no-admission-webhooks-use-cel">I.4</a>) to avoid two competing ordering systems in one CR. The reconciler's existing dependency-aware spawn logic (ARCHITECTURE.md §DependsOn) generalizes to stages — a stage is "ready" when its <code>dependsOn</code> stages reach the required completion (<code>merge</code> = all teammates Succeeded).</p>
+<p><strong><code>approvalRequired</code></strong> reuses the existing approval-gate annotation mechanism (<code>approved.kagents.dev/stage-{name}</code>), not a new system.</p>
+<h2 id="ii3-agentteamschedule">II.3 AgentTeamSchedule<a class="headerlink" href="#ii3-agentteamschedule" title="Permanent link">&para;</a></h2>
+<p>A new CRD that instantiates teams on a cron schedule — the operator's "CronJob for knowledge work."</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kagents.dev/v1alpha1</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AgentTeamSchedule</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">metadata</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">weekly-standup-summary</span><span class="p p-Indicator">,</span><span class="nt"> namespace</span><span class="p">:</span><span class="w"> </span><span class="nv">cowork-agents</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">schedule</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">MON&quot;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">templateRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">standup-summarizer</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">auth</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">apiKeySecret</span><span class="p">:</span><span class="w"> </span><span class="nv">anthropic-api-key</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">workspace</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">inputs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">configMap</span><span class="p">:</span><span class="w"> </span><span class="nv">team-channels</span><span class="p p-Indicator">}]}</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nt">lifecycle</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1h&quot;</span><span class="p p-Indicator">,</span><span class="nt"> budgetLimit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10.00&quot;</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="nt">historyLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+</span></code></pre></div>
+<p><strong>Controller:</strong> new <code>AgentTeamScheduleReconciler</code>. Mirrors the upstream <code>CronJob</code> controller pattern — parse with <code>robfig/cron</code>, on each reconcile determine if a run is due for the current window, create an <code>AgentTeamRun</code> from <code>templateRef</code> + overrides, GC completed runs beyond <code>historyLimit</code>. <strong>Idempotency</strong> via a deterministic run name per window (<code>{schedule}-{unix-window}</code>) so a requeue can't double-fire.</p>
+<p><strong>Status:</strong> <code>lastScheduledAt</code>, <code>nextScheduledAt</code>, <code>activeRun</code>, <code>runs[]</code>.</p>
+<h2 id="ii4-agentteamtrigger">II.4 AgentTeamTrigger<a class="headerlink" href="#ii4-agentteamtrigger" title="Permanent link">&para;</a></h2>
+<p>A new CRD that instantiates teams in response to external events.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kagents.dev/v1alpha1</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AgentTeamTrigger</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">metadata</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">new-deal-onboarding</span><span class="p p-Indicator">,</span><span class="nt"> namespace</span><span class="p">:</span><span class="w"> </span><span class="nv">cowork-agents</span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">trigger</span><span class="p">:</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">webhook</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="nv">/hooks/new-deal</span><span class="p p-Indicator">,</span><span class="nt"> secret</span><span class="p">:</span><span class="w"> </span><span class="nv">webhook-hmac-secret</span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="c1"># watchResource: {apiVersion: v1, kind: ConfigMap, namespace: sales, labelSelector: &quot;type=new-deal&quot;}</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">templateRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">deal-onboarding-team</span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="nt">auth</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">apiKeySecret</span><span class="p">:</span><span class="w"> </span><span class="nv">anthropic-api-key</span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span><span class="nt">payloadInjection</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="nv">/workspace/data/trigger-payload.json</span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span><span class="nt">concurrencyPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Allow</span><span class="w">   </span><span class="c1"># Allow | Forbid | Replace</span>
+</span></code></pre></div>
+<p><strong>Controller + server:</strong> a lightweight HTTP server for webhook triggers, validated by HMAC when <code>secret</code> is set; on a valid event it creates an <code>AgentTeamRun</code> and stores the payload as a ConfigMap mounted at <code>payloadInjection.mountPath</code>. <code>concurrencyPolicy</code> governs overlap.</p>
+<p><strong>Design decision — server topology:</strong> run the webhook listener as its <strong>own Deployment/Service</strong> (<code>kagents-trigger</code>), <em>not</em> folded into the operator's manager process. Rationale: it's an ingress-exposed, internet-reachable surface with a very different security/scaling profile from the reconcile loop; coupling it to the manager would put a public endpoint in the leader-elected controller pod. This mirrors how the dashboard already ships as a separate, optional sub-deployment. Gated behind a Helm value (<code>trigger.enabled</code>, default false).</p>
+<h2 id="ii5-result-delivery">II.5 Result delivery<a class="headerlink" href="#ii5-result-delivery" title="Permanent link">&para;</a></h2>
+<p>A new <code>onComplete: deliver</code> mode plus a <code>delivery[]</code> list of targets.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">lifecycle</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">onComplete</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deliver</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">delivery</span><span class="p">:</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">slack</span><span class="p p-Indicator">,</span><span class="nt">        channel</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#reports&quot;</span><span class="p p-Indicator">,</span><span class="nt"> artifactPath</span><span class="p">:</span><span class="w"> </span><span class="nv">/workspace/output/q3-report.pdf</span><span class="p p-Indicator">,</span><span class="nt"> message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Q3</span><span class="nv"> </span><span class="s">report</span><span class="nv"> </span><span class="s">ready.&quot;</span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">email</span><span class="p p-Indicator">,</span><span class="nt">        to</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team@acme.com</span><span class="p p-Indicator">],</span><span class="nt"> subject</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Q3</span><span class="nv"> </span><span class="s">Report&quot;</span><span class="p p-Indicator">,</span><span class="nt"> attachmentPath</span><span class="p">:</span><span class="w"> </span><span class="nv">/workspace/output/q3-report.pdf</span><span class="p p-Indicator">,</span><span class="nt"> credentialsSecret</span><span class="p">:</span><span class="w"> </span><span class="nv">smtp-credentials</span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">google-drive</span><span class="p p-Indicator">,</span><span class="nt"> folder</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Shared</span><span class="nv"> </span><span class="s">Reports/Q3&quot;</span><span class="p p-Indicator">,</span><span class="nt"> artifactPath</span><span class="p">:</span><span class="w"> </span><span class="nv">/workspace/output/</span><span class="p p-Indicator">,</span><span class="nt"> credentialsSecret</span><span class="p">:</span><span class="w"> </span><span class="nv">gdrive-service-account</span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">webhook</span><span class="p p-Indicator">,</span><span class="nt">      url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://hooks.example.com/reports&quot;</span><span class="p p-Indicator">,</span><span class="nt"> artifactPath</span><span class="p">:</span><span class="w"> </span><span class="nv">/workspace/output/q3-report.pdf</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p><strong>Pattern:</strong> delivery runs as a <strong>short-lived Job after teammates complete and quality gates pass</strong> — structurally identical to the existing <code>push-branch</code>/<code>create-pr</code> finalization Job (<a href="../internal/controller/agentteam_controller.go">reuse <code>runFinalization</code></a>). Each target type is a package under <code>internal/delivery/</code> (<code>slack</code>, <code>email</code>, <code>gdrive</code>, <code>webhook</code>). Implement <strong>webhook first</strong> (simplest), then slack, email, gdrive.</p>
+<p><strong>Failure semantics:</strong> delivery failure is recorded in <code>status.delivery[]</code> but does <strong>not</strong> roll the team back to <code>Failed</code> — the knowledge work is done; delivery is best-effort post-processing. This matches the issue and is the right call (don't lose a completed $5 report because Slack 500'd).</p>
+<p><strong>Security:</strong> the delivery Job (not the operator) consumes the <code>credentialsSecret</code>s, mounted only into that Job's pod — the operator never reads SMTP/Drive creds, consistent with the existing MCP-credential handling in ARCHITECTURE.md §MCP Servers.</p>
+<h2 id="ii6-oci-skill-distribution">II.6 OCI skill distribution<a class="headerlink" href="#ii6-oci-skill-distribution" title="Permanent link">&para;</a></h2>
+<p>Extend skill sources from ConfigMap-only to OCI artifacts.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">teammates</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">financial-analyst</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">skills</span><span class="p">:</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">financial-analysis</span><span class="p p-Indicator">,</span><span class="nt"> source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">oci</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ghcr.io/&lt;org&gt;/kagents-skills/financial-analysis:v2&quot;</span><span class="p p-Indicator">}}</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">report-writing</span><span class="p p-Indicator">,</span><span class="nt">     source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">configMap</span><span class="p">:</span><span class="w"> </span><span class="nv">report-writing-skill</span><span class="p p-Indicator">}}</span><span class="w">  </span><span class="c1"># still supported</span>
+</span></code></pre></div>
+<p><strong>Mechanism:</strong> when a skill has <code>source.oci</code>, the operator adds an <strong>init container</strong> (using <code>oras</code> or <code>crane</code>) that pulls the artifact into a shared <code>emptyDir</code>, which the main container mounts at <code>~/.claude/skills/{name}/</code>. ConfigMap skills keep working (backward compatible). Private registries via <code>spec.imagePullSecrets</code>. Cache by digest to avoid re-pulling.</p>
+<p><strong>Skill artifact convention:</strong> <code>SKILL.md</code> (required) + optional <code>examples/</code>, <code>templates/</code>, pushed with <code>oras</code> under a <code>application/vnd.kagents.skill.v1+*</code> media type. Ships with <code>docs/skills-authoring.md</code>.</p>
+<p><strong>Harness interaction:</strong> skills are a Claude-Code concept today (<code>~/.claude/skills/</code>). The <em>mount path</em> is harness-specific, so the skill-mount step is contributed by the harness adapter (<a href="#i1-the-harness-adapter-seam-amc-155">I.1</a>); the OCI <em>pull</em> is harness-neutral.</p>
+<h2 id="ii7-pipeline-aware-observability">II.7 Pipeline-aware observability<a class="headerlink" href="#ii7-pipeline-aware-observability" title="Permanent link">&para;</a></h2>
+<p>The status fields introduced by output routing (<code>status.artifacts</code>) and pipelines (<code>status.pipeline</code>) are the data; this is the surfacing layer.</p>
+<p><strong>Prometheus metrics:</strong> <code>kagents_team_stage_duration_seconds</code> (histogram), <code>kagents_team_artifacts_produced_total</code> (counter), <code>kagents_team_pipeline_stage_active</code> (gauge), <code>kagents_team_delivery_success_total</code> / <code>_failure_total</code> (counters). <em>(Note the metric prefix rebrands <code>claude_</code> → <code>kagents_</code>; fold this into the API-group migration sweep so dashboards/alerts change once.)</em></p>
+<p><strong>Dashboard:</strong> stage progress bar in the team detail view; artifact list with download links. Extends the existing SSE-driven dashboard.</p>
+<p><strong><code>kubectl describe</code>:</strong> pipeline stage summary in the printer columns / additional-printer output.</p>
+<h2 id="ii8-how-the-pieces-compose">II.8 How the pieces compose<a class="headerlink" href="#ii8-how-the-pieces-compose" title="Permanent link">&para;</a></h2>
+<p>The features are deliberately orthogonal layers, not overlapping mechanisms:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>AgentTeamSchedule ─┐
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>AgentTeamTrigger  ─┼─► AgentTeamRun ─► AgentTeam ──► pipeline (stage ordering)
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>(manual apply)    ─┘                                   └► teammates ──► output routing (data flow)
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>                                                                          └► onComplete: deliver (targets)
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>                                       observability (status + metrics) wraps all of it
+</span></code></pre></div>
+<p>Key composition decisions:</p>
+<ol>
+<li><strong>One instantiation path.</strong> <code>AgentTeamSchedule</code> and <code>AgentTeamTrigger</code> both create an <code>AgentTeamRun</code>, which already knows how to resolve a template into an <code>AgentTeam</code>. They do <strong>not</strong> each reimplement team creation — they're thin producers in front of the existing <code>AgentTeamRun</code> controller. This is the single most important reuse decision; it keeps template-resolution logic in one place.</li>
+<li><strong>Ordering vs data flow are separate axes.</strong> <code>pipeline</code> (or <code>dependsOn</code>) decides <em>when</em> a teammate runs; output routing decides <em>what data</em> it starts with. A stage can fan out to 3 analysts (ordering) each of whom consumes the researcher's <code>findings.md</code> (data flow). They compose; neither subsumes the other.</li>
+<li><strong>Delivery is a finalization mode,</strong> reusing the <code>runFinalization</code> Job pattern alongside <code>create-pr</code>/<code>push-branch</code> — not a new lifecycle phase.</li>
+<li><strong><code>spec.harness</code> sits underneath all of it.</strong> Pipelines, schedules, triggers, routing, and delivery are harness-neutral; only model selection and the runner pod touch the adapter. None of the Part II CRDs may hardcode <code>claude</code>/model assumptions.</li>
+</ol>
+<h2 id="ii9-phasing">II.9 Phasing<a class="headerlink" href="#ii9-phasing" title="Permanent link">&para;</a></h2>
+<p>Per the "rebrand first" decision, and a suggested renumber (rebrand = v0.8.0, knowledge work = v0.9.0):</p>
+<p><strong>Milestone 1 — rebrand:</strong> repo rename → module path → API group (clean break) → harness seam → image/chart names. Strictly first.</p>
+<p><strong>Milestone 2 — knowledge work, suggested order:</strong>
+1. <strong>Output routing</strong> + <strong>pipeline</strong> — the core primitives; everything else references them.
+2. <strong>AgentTeamSchedule</strong> + <strong>AgentTeamTrigger</strong> — instantiation, both on the shared <code>AgentTeamRun</code> path.
+3. <strong>Delivery</strong> + <strong>OCI skills</strong> — integrations; delivery starts with the webhook target.
+4. <strong>Observability</strong> — cross-cutting, lands last so it can surface all the above.
+5. <strong>README/positioning reframe</strong> — lands with or just after the features it describes.</p>
+<h2 id="ii10-testing-strategy">II.10 Testing strategy<a class="headerlink" href="#ii10-testing-strategy" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Harness seam regression</td>
+<td>default <code>claude-code</code> adapter produces a pod spec byte-identical to today's</td>
+<td>golden-ish unit test comparing built PodSpec before/after the refactor</td>
+</tr>
+<tr>
+<td>Output routing</td>
+<td>artifact verification, routing copy, downstream spawn, missing-file error</td>
+<td>unit (fake client) + envtest (real spawn ordering)</td>
+</tr>
+<tr>
+<td>Pipeline</td>
+<td>stage transitions, <code>parallel</code>/<code>merge</code> semantics, CEL mutual-exclusivity with <code>dependsOn</code></td>
+<td>unit for transition logic; envtest for a 4-stage sample; apply-time test for the CEL rule</td>
+</tr>
+<tr>
+<td>Schedule</td>
+<td>cron parsing, due-window detection, idempotent run naming, <code>historyLimit</code> GC</td>
+<td>unit + envtest (fake clock)</td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>HMAC validation, payload ConfigMap injection, <code>concurrencyPolicy</code></td>
+<td>unit (httptest) for the server; envtest for run creation</td>
+</tr>
+<tr>
+<td>Delivery</td>
+<td>each target type; failure-doesn't-fail-team</td>
+<td>unit per <code>internal/delivery/*</code> with mock endpoints</td>
+</tr>
+<tr>
+<td>OCI skills</td>
+<td>pull → mount, ConfigMap fallback, digest cache</td>
+<td>unit for resolution; e2e (real <code>oras</code> pull from ghcr)</td>
+</tr>
+<tr>
+<td>Migration</td>
+<td>no <code>kagents.dev</code> / old module path remains; CRDs install under new group</td>
+<td>grep gate in CI + envtest install smoke</td>
+</tr>
+</tbody>
+</table>
+<p>New CRDs (<code>AgentTeamSchedule</code>, <code>AgentTeamTrigger</code>) each get their own envtest integration suite mirroring the existing <code>agentteamrun_integration_test.go</code> pattern.</p>
+<h2 id="ii11-open-questions-for-review">II.11 Open questions for review<a class="headerlink" href="#ii11-open-questions-for-review" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Renumber?</strong> Confirm rebrand = v0.8.0 and Knowledge Work → v0.9.0, or keep numbers and rely on sequencing.</li>
+<li><strong>Trigger server topology</strong> — separate <code>kagents-trigger</code> Deployment (proposed) vs. folding into the manager. I argue separate (public ingress surface). Agree?</li>
+<li><strong>OCI registry org</strong> — <code>ghcr.io/&lt;org&gt;/kagents-skills/*</code>; which org/namespace is canonical for first-party skills?</li>
+<li><strong>Delivery scope for the first cut</strong> — issue lists Slack/email/Drive/webhook. Proposed order ships webhook + Slack first; email/Drive can trail. OK to land delivery incrementally rather than all four at once?</li>
+<li><strong>Schedule/Trigger → Run vs Team</strong> — both produce <code>AgentTeamRun</code> (template-based) in this design. If a schedule/trigger should ever run a template-less inline team, that's a second path; proposed to <em>not</em> support that initially (always go through a template).</li>
+</ol>
+
+
+
+
+
+
+
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Last update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 31, 2026</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Created">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 12, 2026</span>
+  </span>
+
+    
+    
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Alan Chester
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/amcheste/kagents" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.60a45f97.min.js"></script>
+      
+        <script src="../javascripts/drawer.js"></script>
+      
+    
+  </body>
+</html>

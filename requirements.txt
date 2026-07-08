@@ -1,0 +1,4 @@
+# Pinned for reproducible site builds. Bump via Dependabot or by hand
+# after testing locally with `mkdocs build --strict`.
+mkdocs-material==9.5.50
+mkdocs-git-revision-date-localized-plugin==1.2.7

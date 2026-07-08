@@ -1,0 +1,4513 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Run Claude Code Agent Teams as a Kubernetes operator">
+      
+      
+        <meta name="author" content="Alan Chester">
+      
+      
+        <link rel="canonical" href="https://kagents.dev/reference/api/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../../explanation/">
+      
+      
+      <link rel="icon" href="../../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
+    
+    
+      
+        <title>API reference - kagents</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a40c8224.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:300,300i,400,400i,700,700i%7CIBM+Plex+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"IBM Plex Sans";--md-code-font:"IBM Plex Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/ac-colors.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/ac-typography.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="kagents" class="md-header__button md-logo" aria-label="kagents" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            kagents
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/amcheste/kagents" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amcheste/kagents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="kagents" class="md-nav__button md-logo" aria-label="kagents" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    kagents
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/amcheste/kagents" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amcheste/kagents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-to guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Install
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            Install
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/install/eks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Amazon EKS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/install/gke/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Google GKE
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/install/aks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Azure AKS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Operate
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            Operate
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/operate/expose-dashboard/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Expose the dashboard
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/operate/shared-storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configure shared storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/operate/budget-alerts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Set budget alerts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Author skills
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            Author skills
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/skill-authoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Package and publish skills
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    API reference
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    API reference
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Packages
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kagentsdevv1alpha1" class="md-nav__link">
+    <span class="md-ellipsis">
+      kagents.dev/v1alpha1
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="kagents.dev/v1alpha1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resource-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Resource Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resource Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteam" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeam
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamrun" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamRun
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamrunspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamRunSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamschedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamSchedule
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamschedulespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamScheduleSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamschedulestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamScheduleStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtemplate" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTemplate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtemplatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTemplateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtemplatestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTemplateStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtrigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTrigger
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtriggerspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTriggerSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtriggerstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTriggerStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#approvalgatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      ApprovalGateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#artifactstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      ArtifactStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AuthSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beadsspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      BeadsSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinationspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      CoordinationSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deliverystatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      DeliveryStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deliverytarget" class="md-nav__link">
+    <span class="md-ellipsis">
+      DeliveryTarget
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      InputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leadspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      LeadSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lifecyclespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      LifecycleSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcpserverspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      MCPServerSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metricsspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      MetricsSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observabilityspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      ObservabilitySpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      OutputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#payloadinjectionspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      PayloadInjectionSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipelinespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      PipelineSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipelinestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      PipelineStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pullrequestspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      PullRequestSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pullrequeststatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      PullRequestStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#qualitygatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      QualityGateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repositoryspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      RepositorySpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduledrunstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      ScheduledRunStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      ScopeSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skillsource" class="md-nav__link">
+    <span class="md-ellipsis">
+      SkillSource
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skillspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      SkillSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stagespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      StageSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stagestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      StageStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tasksummary" class="md-nav__link">
+    <span class="md-ellipsis">
+      TaskSummary
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#teammatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      TeammateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#teammatestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TeammateStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templatereference" class="md-nav__link">
+    <span class="md-ellipsis">
+      TemplateReference
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#triggerrunstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TriggerRunStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#triggersource" class="md-nav__link">
+    <span class="md-ellipsis">
+      TriggerSource
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webhookspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WebhookSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webhooktriggerspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WebhookTriggerSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspaceinputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkspaceInputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspaceoutputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkspaceOutputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspacespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkspaceSpec
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Explanation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/resources/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Resource model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/coordination/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Coordination protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Packages
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kagentsdevv1alpha1" class="md-nav__link">
+    <span class="md-ellipsis">
+      kagents.dev/v1alpha1
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="kagents.dev/v1alpha1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resource-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Resource Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resource Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteam" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeam
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamrun" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamRun
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamrunspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamRunSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamschedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamSchedule
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamschedulespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamScheduleSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamschedulestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamScheduleStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtemplate" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTemplate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtemplatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTemplateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtemplatestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTemplateStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtrigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTrigger
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtriggerspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTriggerSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentteamtriggerstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentTeamTriggerStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#approvalgatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      ApprovalGateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#artifactstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      ArtifactStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      AuthSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beadsspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      BeadsSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinationspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      CoordinationSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deliverystatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      DeliveryStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deliverytarget" class="md-nav__link">
+    <span class="md-ellipsis">
+      DeliveryTarget
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      InputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leadspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      LeadSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lifecyclespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      LifecycleSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcpserverspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      MCPServerSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metricsspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      MetricsSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observabilityspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      ObservabilitySpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      OutputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#payloadinjectionspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      PayloadInjectionSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipelinespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      PipelineSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipelinestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      PipelineStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pullrequestspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      PullRequestSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pullrequeststatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      PullRequestStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#qualitygatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      QualityGateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repositoryspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      RepositorySpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduledrunstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      ScheduledRunStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      ScopeSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skillsource" class="md-nav__link">
+    <span class="md-ellipsis">
+      SkillSource
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skillspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      SkillSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stagespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      StageSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stagestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      StageStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tasksummary" class="md-nav__link">
+    <span class="md-ellipsis">
+      TaskSummary
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#teammatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      TeammateSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#teammatestatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TeammateStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templatereference" class="md-nav__link">
+    <span class="md-ellipsis">
+      TemplateReference
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#triggerrunstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TriggerRunStatus
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#triggersource" class="md-nav__link">
+    <span class="md-ellipsis">
+      TriggerSource
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webhookspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WebhookSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webhooktriggerspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WebhookTriggerSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspaceinputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkspaceInputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspaceoutputspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkspaceOutputSpec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspacespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkspaceSpec
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/amcheste/kagents/edit/main/docs/reference/api/index.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<h2 id="packages">Packages<a class="headerlink" href="#packages" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#kagentsdevv1alpha1">kagents.dev/v1alpha1</a></li>
+</ul>
+<h2 id="kagentsdevv1alpha1">kagents.dev/v1alpha1<a class="headerlink" href="#kagentsdevv1alpha1" title="Permanent link">&para;</a></h2>
+<p>Package v1alpha1 contains API Schema definitions for the claude v1alpha1 API group.</p>
+<p>Package v1alpha1 contains API Schema definitions for the claude v1alpha1 API group.</p>
+<h3 id="resource-types">Resource Types<a class="headerlink" href="#resource-types" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="#agentteam">AgentTeam</a></li>
+<li><a href="#agentteamrun">AgentTeamRun</a></li>
+<li><a href="#agentteamschedule">AgentTeamSchedule</a></li>
+<li><a href="#agentteamtemplate">AgentTeamTemplate</a></li>
+<li><a href="#agentteamtrigger">AgentTeamTrigger</a></li>
+</ul>
+<h4 id="agentstatus">AgentStatus<a class="headerlink" href="#agentstatus" title="Permanent link">&para;</a></h4>
+<p>AgentStatus reports a single agent's state.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a>
+- <a href="#teammatestatus">TeammateStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>podName</code> <em>string</em></td>
+<td>PodName is the name of the agent's pod.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase of this agent.</td>
+<td></td>
+<td>Enum: [Pending Running Idle Completed Failed Waiting] <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteam">AgentTeam<a class="headerlink" href="#agentteam" title="Permanent link">&para;</a></h4>
+<p>AgentTeam is the Schema for the agentteams API.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>kagents.dev/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>AgentTeam</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#agentteamspec">AgentTeamSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#agentteamstatus">AgentTeamStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamrun">AgentTeamRun<a class="headerlink" href="#agentteamrun" title="Permanent link">&para;</a></h4>
+<p>AgentTeamRun is an instance of an AgentTeamTemplate applied to a specific repository.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>kagents.dev/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>AgentTeamRun</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#agentteamrunspec">AgentTeamRunSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#agentteamstatus">AgentTeamStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamrunspec">AgentTeamRunSpec<a class="headerlink" href="#agentteamrunspec" title="Permanent link">&para;</a></h4>
+<p>AgentTeamRunSpec defines an instance of a template applied to a specific repo.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrun">AgentTeamRun</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>templateRef</code> <em><a href="#templatereference">TemplateReference</a></em></td>
+<td>TemplateRef references the AgentTeamTemplate to instantiate.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>repository</code> <em><a href="#repositoryspec">RepositorySpec</a></em></td>
+<td>Repository configuration for this run (coding mode).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
+<td>Workspace configures inputs/outputs for this run (Cowork mode).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>auth</code> <em><a href="#authspec">AuthSpec</a></em></td>
+<td>Auth configures API authentication for this run.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lead</code> <em><a href="#leadspec">LeadSpec</a></em></td>
+<td>Lead configures the team lead for this run.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lifecycle</code> <em><a href="#lifecyclespec">LifecycleSpec</a></em></td>
+<td>Lifecycle overrides for this run.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamschedule">AgentTeamSchedule<a class="headerlink" href="#agentteamschedule" title="Permanent link">&para;</a></h4>
+<p>AgentTeamSchedule creates AgentTeamRun instances on a cron schedule.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>kagents.dev/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>AgentTeamSchedule</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#agentteamschedulespec">AgentTeamScheduleSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#agentteamschedulestatus">AgentTeamScheduleStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamschedulespec">AgentTeamScheduleSpec<a class="headerlink" href="#agentteamschedulespec" title="Permanent link">&para;</a></h4>
+<p>AgentTeamScheduleSpec defines a cron-triggered pattern for creating
+AgentTeamRun instances. On each fire, the operator creates one
+AgentTeamRun from the referenced AgentTeamTemplate, parameterized
+with the schedule's repository/workspace/auth/lead/lifecycle fields.
+The existing AgentTeamRun controller then turns that Run into an
+AgentTeam — schedules don't create teams directly, they produce
+the same Run objects a human would create by hand.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamschedule">AgentTeamSchedule</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schedule</code> <em>string</em></td>
+<td>Schedule is a five-field cron expression in the operator's local<br />time zone (e.g. "0 6 * * MON" for Monday 06:00). Parsed by<br />robfig/cron/v3 with the standard parser.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>templateRef</code> <em><a href="#templatereference">TemplateReference</a></em></td>
+<td>TemplateRef names the AgentTeamTemplate to instantiate on each fire.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>auth</code> <em><a href="#authspec">AuthSpec</a></em></td>
+<td>Auth is forwarded to every created AgentTeamRun.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lead</code> <em><a href="#leadspec">LeadSpec</a></em></td>
+<td>Lead configures the team lead for every created AgentTeamRun.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>repository</code> <em><a href="#repositoryspec">RepositorySpec</a></em></td>
+<td>Repository overrides the repository for each Run (coding mode).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
+<td>Workspace overrides the workspace for each Run (Cowork mode).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lifecycle</code> <em><a href="#lifecyclespec">LifecycleSpec</a></em></td>
+<td>Lifecycle overrides forwarded to every created AgentTeamRun.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>historyLimit</code> <em>integer</em></td>
+<td>HistoryLimit caps how many completed Runs are retained in<br />status.runs[] and on the cluster. Once exceeded, the oldest<br />completed Runs are deleted. Set to 0 (or omit) to keep all Runs.</td>
+<td></td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamschedulestatus">AgentTeamScheduleStatus<a class="headerlink" href="#agentteamschedulestatus" title="Permanent link">&para;</a></h4>
+<p>AgentTeamScheduleStatus reports cron progress and Run history.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamschedule">AgentTeamSchedule</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lastScheduledAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>LastScheduledAt is when the most recent fire occurred (the schedule<br />time that triggered Run creation, not the wall-clock reconcile time).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>nextScheduledAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>NextScheduledAt is the time of the next scheduled fire as computed<br />from the cron expression.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>activeRun</code> <em>string</em></td>
+<td>ActiveRun names the in-flight AgentTeamRun, if any. Empty when no<br />run is currently executing.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>runs</code> <em><a href="#scheduledrunstatus">ScheduledRunStatus</a> array</em></td>
+<td>Runs is the recent history of Runs this schedule created. Truncated<br />to HistoryLimit (oldest entries dropped first).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamspec">AgentTeamSpec<a class="headerlink" href="#agentteamspec" title="Permanent link">&para;</a></h4>
+<p>AgentTeamSpec defines the desired state of an AgentTeam.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteam">AgentTeam</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>repository</code> <em><a href="#repositoryspec">RepositorySpec</a></em></td>
+<td>Repository configuration for the codebase agents will work on.<br />Use this for coding tasks. Optional when Workspace is set.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
+<td>Workspace configures non-git inputs and outputs for Cowork teams.<br />Use this for knowledge-work tasks (documents, reports, email, etc.).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>auth</code> <em><a href="#authspec">AuthSpec</a></em></td>
+<td>Auth configures how agents authenticate with the Anthropic API.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lead</code> <em><a href="#leadspec">LeadSpec</a></em></td>
+<td>Lead configures the team lead agent.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>teammates</code> <em><a href="#teammatespec">TeammateSpec</a> array</em></td>
+<td>Teammates defines the worker agents in the team.</td>
+<td></td>
+<td>MaxItems: 16 <br />MinItems: 1 <br /></td>
+</tr>
+<tr>
+<td><code>coordination</code> <em><a href="#coordinationspec">CoordinationSpec</a></em></td>
+<td>Coordination configures how agents communicate.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lifecycle</code> <em><a href="#lifecyclespec">LifecycleSpec</a></em></td>
+<td>Lifecycle configures team runtime behavior and budget.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>qualityGates</code> <em><a href="#qualitygatespec">QualityGateSpec</a></em></td>
+<td>QualityGates configures validation before marking team complete.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>observability</code> <em><a href="#observabilityspec">ObservabilitySpec</a></em></td>
+<td>Observability configures metrics and notifications.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>pipeline</code> <em><a href="#pipelinespec">PipelineSpec</a></em></td>
+<td>Pipeline declares an ordered set of stages with explicit fan-out/merge<br />semantics. When set, the operator derives each teammate's effective<br />dependencies from the stage graph instead of the per-teammate DependsOn<br />field, which becomes mutually exclusive (enforced by CEL validation<br />on this spec). Inputs[].From still contributes regardless.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>harness</code> <em>string</em></td>
+<td>Harness selects the agent runtime that powers this team's pods.<br />Today the only supported value is "claude-code" (Anthropic's native<br />Claude Code Agent Teams protocol), which is also the default when<br />omitted. The field exists so the operator's API stays neutral to a<br />single agent runtime; future harnesses for other team-based agent<br />systems can plug in behind the same CRD without an API break.</td>
+<td>claude-code</td>
+<td>Enum: [claude-code] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+<td>ImagePullSecrets are credentials for pulling private container<br />images, including OCI-distributed skills. The same secrets are<br />applied to agent pods (for the runner image) and to skill-puller<br />init containers (for pulling skill artifacts via ORAS). Use<br />kubernetes.io/dockerconfigjson Secrets — the operator mounts them<br />into the init container so ORAS can resolve registry credentials<br />from $DOCKER_CONFIG.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamstatus">AgentTeamStatus<a class="headerlink" href="#agentteamstatus" title="Permanent link">&para;</a></h4>
+<p>AgentTeamStatus defines the observed state of an AgentTeam.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteam">AgentTeam</a>
+- <a href="#agentteamrun">AgentTeamRun</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase is the current lifecycle phase of the team.</td>
+<td></td>
+<td>Enum: [Pending Initializing Running Completed Failed TimedOut BudgetExceeded] <br /></td>
+</tr>
+<tr>
+<td><code>startedAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>StartedAt is when the team began execution.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>completedAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>CompletedAt is when the team finished execution.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>totalTokensUsed</code> <em>integer</em></td>
+<td>TotalTokensUsed is the estimated total tokens consumed.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>estimatedCost</code> <em>string</em></td>
+<td>EstimatedCost is the estimated API cost in USD (e.g. "4.50").</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>ready</code> <em>string</em></td>
+<td>Ready reports how many teammate pods are ready vs. declared, in the form<br />"running+completed/total" (e.g. "3/5"). Shown in <code>kubectl get</code> output.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lead</code> <em><a href="#agentstatus">AgentStatus</a></em></td>
+<td>Lead reports the team lead's status.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>teammates</code> <em><a href="#teammatestatus">TeammateStatus</a> array</em></td>
+<td>Teammates reports each teammate's status.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tasks</code> <em><a href="#tasksummary">TaskSummary</a></em></td>
+<td>Tasks reports aggregate task progress.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>pullRequest</code> <em><a href="#pullrequeststatus">PullRequestStatus</a></em></td>
+<td>PullRequest reports PR creation status.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>consolidatedBranch</code> <em>string</em></td>
+<td>ConsolidatedBranch is the branch name pushed by OnComplete=push-branch.<br />Populated once the push-branch Job succeeds; OnComplete=create-pr reads<br />this as the PR head branch when set, in place of Spec.Repository.Branch.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>artifacts</code> <em><a href="#artifactstatus">ArtifactStatus</a> array</em></td>
+<td>Artifacts records the files produced by teammates that declared<br />Outputs in their spec. Populated as each producer teammate reaches<br />Completed; the operator does not retroactively scan teammate pods<br />for undeclared files.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>pipeline</code> <em><a href="#pipelinestatus">PipelineStatus</a></em></td>
+<td>Pipeline reports stage-level progress when spec.pipeline is set.<br />Recomputed every reconcile from teammate pod phases; cleared if<br />spec.pipeline is removed.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>delivery</code> <em><a href="#deliverystatus">DeliveryStatus</a> array</em></td>
+<td>Delivery records the outcome of every DeliveryTarget dispatched<br />by OnComplete=deliver. Populated once executeOnComplete has run;<br />each entry is independent — partial success is normal and the<br />team is not rolled back when individual targets fail.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions represent the latest available observations.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamtemplate">AgentTeamTemplate<a class="headerlink" href="#agentteamtemplate" title="Permanent link">&para;</a></h4>
+<p>AgentTeamTemplate is a reusable team definition.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>kagents.dev/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>AgentTeamTemplate</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#agentteamtemplatespec">AgentTeamTemplateSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#agentteamtemplatestatus">AgentTeamTemplateStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamtemplatespec">AgentTeamTemplateSpec<a class="headerlink" href="#agentteamtemplatespec" title="Permanent link">&para;</a></h4>
+<p>AgentTeamTemplateSpec defines a reusable team pattern.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtemplate">AgentTeamTemplate</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description explains the template's purpose.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>teammates</code> <em><a href="#teammatespec">TeammateSpec</a> array</em></td>
+<td>Teammates defines the worker agents in the template.</td>
+<td></td>
+<td>MaxItems: 16 <br />MinItems: 1 <br /></td>
+</tr>
+<tr>
+<td><code>coordination</code> <em><a href="#coordinationspec">CoordinationSpec</a></em></td>
+<td>Coordination configures how agents communicate.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lifecycle</code> <em><a href="#lifecyclespec">LifecycleSpec</a></em></td>
+<td>Lifecycle configures default runtime behavior.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>qualityGates</code> <em><a href="#qualitygatespec">QualityGateSpec</a></em></td>
+<td>QualityGates configures default validation steps.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamtemplatestatus">AgentTeamTemplateStatus<a class="headerlink" href="#agentteamtemplatestatus" title="Permanent link">&para;</a></h4>
+<p>AgentTeamTemplateStatus reports validation state for an AgentTeamTemplate.
+The reconciler validates teammate references and writes a Ready condition;
+AgentTeamRun controllers should refuse to instantiate templates where
+Ready is false.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtemplate">AgentTeamTemplate</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ready</code> <em>boolean</em></td>
+<td>Ready is true when the template has passed validation and is safe to<br />instantiate via an AgentTeamRun.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions track the latest validation state with structured reasons.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamtrigger">AgentTeamTrigger<a class="headerlink" href="#agentteamtrigger" title="Permanent link">&para;</a></h4>
+<p>AgentTeamTrigger creates AgentTeamRun instances in response to events.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>kagents.dev/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>AgentTeamTrigger</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#agentteamtriggerstatus">AgentTeamTriggerStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamtriggerspec">AgentTeamTriggerSpec<a class="headerlink" href="#agentteamtriggerspec" title="Permanent link">&para;</a></h4>
+<p>AgentTeamTriggerSpec defines a webhook-driven AgentTeamRun creation
+pattern. The kagents-trigger ingress deployment watches AgentTeamTrigger
+resources, matches incoming HTTP requests against TriggerSource.Webhook,
+applies HMAC validation + ConcurrencyPolicy, and creates one
+AgentTeamRun per accepted event. The existing AgentTeamRun controller
+then turns that Run into a team.</p>
+<p>The trigger listener intentionally runs as its own Deployment
+(kagents-trigger) rather than inside the operator manager: it's an
+internet-reachable surface and shouldn't live inside the leader-elected
+controller pod.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtrigger">AgentTeamTrigger</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trigger</code> <em><a href="#triggersource">TriggerSource</a></em></td>
+<td>Trigger defines which external signal fires this trigger.<br />Today only Webhook is supported; future expansion (watchResource,<br />schedule-on-event, etc.) is anticipated by the wrapper struct.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>templateRef</code> <em><a href="#templatereference">TemplateReference</a></em></td>
+<td>TemplateRef names the AgentTeamTemplate to instantiate on each fire.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>auth</code> <em><a href="#authspec">AuthSpec</a></em></td>
+<td>Auth is forwarded to every created AgentTeamRun.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lead</code> <em><a href="#leadspec">LeadSpec</a></em></td>
+<td>Lead configures the team lead for every created AgentTeamRun.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>repository</code> <em><a href="#repositoryspec">RepositorySpec</a></em></td>
+<td>Repository overrides the repository for each Run (coding mode).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
+<td>Workspace overrides the workspace for each Run (Cowork mode).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lifecycle</code> <em><a href="#lifecyclespec">LifecycleSpec</a></em></td>
+<td>Lifecycle overrides forwarded to every created AgentTeamRun.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>payloadInjection</code> <em><a href="#payloadinjectionspec">PayloadInjectionSpec</a></em></td>
+<td>PayloadInjection configures how the incoming webhook payload is<br />surfaced to the agent pods. The kagents-trigger creates a ConfigMap<br />in the trigger's namespace carrying the request body, and adds a<br />matching read-only volume mount to the resulting team's workspace<br />inputs at PayloadInjection.MountPath.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>concurrencyPolicy</code> <em>string</em></td>
+<td>ConcurrencyPolicy governs what happens when a webhook fires while<br />a previous run is still in-flight.<br />  - Allow   (default) — always create a new Run.<br />  - Forbid  — reject the webhook with 409 if ActiveRun is set.<br />  - Replace — delete the active Run, then create a new one.</td>
+<td>Allow</td>
+<td>Enum: [Allow Forbid Replace] <br />Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentteamtriggerstatus">AgentTeamTriggerStatus<a class="headerlink" href="#agentteamtriggerstatus" title="Permanent link">&para;</a></h4>
+<p>AgentTeamTriggerStatus reports trigger bookkeeping.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtrigger">AgentTeamTrigger</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lastTriggeredAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>LastTriggeredAt is the most recent wall-clock time the listener<br />accepted a webhook for this trigger and created a Run.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>activeRun</code> <em>string</em></td>
+<td>ActiveRun names the in-flight AgentTeamRun, if any. Cleared once<br />the underlying Run reaches a terminal phase.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>totalRuns</code> <em>integer</em></td>
+<td>TotalRuns is the total number of Runs this trigger has produced<br />over its lifetime.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>runs</code> <em><a href="#triggerrunstatus">TriggerRunStatus</a> array</em></td>
+<td>Runs is the recent history of Runs this trigger created. The<br />reconciler maintains this from labeled AgentTeamRuns in the same<br />namespace.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="approvalgatespec">ApprovalGateSpec<a class="headerlink" href="#approvalgatespec" title="Permanent link">&para;</a></h4>
+<p>ApprovalGateSpec pauses execution before a named event until human approval is recorded.
+Approval is granted by adding the annotation approved.kagents.dev/{event}=true to the AgentTeam.</p>
+<p><em>Appears in:</em>
+- <a href="#lifecyclespec">LifecycleSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code> <em>string</em></td>
+<td>Event is the gate identifier. Use "spawn-{teammate-name}" to gate spawning a specific teammate.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>channel</code> <em>string</em></td>
+<td>Channel is how the approval request notification is sent.</td>
+<td>none</td>
+<td>Enum: [webhook none] <br /></td>
+</tr>
+<tr>
+<td><code>webhookUrl</code> <em>string</em></td>
+<td>WebhookURL to POST when this gate is triggered (used when channel is "webhook").</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="artifactstatus">ArtifactStatus<a class="headerlink" href="#artifactstatus" title="Permanent link">&para;</a></h4>
+<p>ArtifactStatus records a single artifact produced by a teammate that
+declared a matching OutputSpec.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the basename of the artifact file (e.g. "findings.md").</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>path</code> <em>string</em></td>
+<td>Path is the producer pod's filesystem path where the artifact was<br />written (mirrors OutputSpec.Path).</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>producedBy</code> <em>string</em></td>
+<td>ProducedBy is the name of the teammate that produced this artifact.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>producedAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>ProducedAt is when the operator recorded the artifact — typically<br />the first reconcile after the producer pod reached Succeeded.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="authspec">AuthSpec<a class="headerlink" href="#authspec" title="Permanent link">&para;</a></h4>
+<p>AuthSpec defines Anthropic API authentication.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrunspec">AgentTeamRunSpec</a>
+- <a href="#agentteamschedulespec">AgentTeamScheduleSpec</a>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiKeySecret</code> <em>string</em></td>
+<td>APIKeySecret references a Secret containing ANTHROPIC_API_KEY.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>oauthSecret</code> <em>string</em></td>
+<td>OAuthSecret references a Secret containing OAuth tokens for subscription auth.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="beadsspec">BeadsSpec<a class="headerlink" href="#beadsspec" title="Permanent link">&para;</a></h4>
+<p>BeadsSpec configures Beads integration.</p>
+<p><em>Appears in:</em>
+- <a href="#coordinationspec">CoordinationSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled turns on Beads tracking.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>doltServerService</code> <em>string</em></td>
+<td>DoltServerService is the K8s service name for the Dolt SQL server.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>doltServerPort</code> <em>integer</em></td>
+<td>DoltServerPort is the port for the Dolt SQL server.</td>
+<td>3306</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="coordinationspec">CoordinationSpec<a class="headerlink" href="#coordinationspec" title="Permanent link">&para;</a></h4>
+<p>CoordinationSpec configures inter-agent communication.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtemplatespec">AgentTeamTemplateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mailboxBackend</code> <em>string</em></td>
+<td>MailboxBackend determines how mailbox messages are transported.</td>
+<td>shared-volume</td>
+<td>Enum: [shared-volume redis nats] <br /></td>
+</tr>
+<tr>
+<td><code>taskBackend</code> <em>string</em></td>
+<td>TaskBackend determines how the shared task list is stored.</td>
+<td>shared-volume</td>
+<td>Enum: [shared-volume beads] <br /></td>
+</tr>
+<tr>
+<td><code>beads</code> <em><a href="#beadsspec">BeadsSpec</a></em></td>
+<td>Beads configures optional Beads integration for persistent tracking.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="deliverystatus">DeliveryStatus<a class="headerlink" href="#deliverystatus" title="Permanent link">&para;</a></h4>
+<p>DeliveryStatus records the result of a single DeliveryTarget dispatch.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type mirrors the originating DeliveryTarget.Type.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>target</code> <em>string</em></td>
+<td>Target is a short human-readable label describing where this<br />delivery went (e.g. "#reports" for slack, the URL for webhook).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>deliveredAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>DeliveredAt is when the sender finished — whether successfully<br />or not.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>success</code> <em>boolean</em></td>
+<td>Success is true iff the sender returned no error.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>error</code> <em>string</em></td>
+<td>Error carries the sender's failure message when Success is false.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="deliverytarget">DeliveryTarget<a class="headerlink" href="#deliverytarget" title="Permanent link">&para;</a></h4>
+<p>DeliveryTarget describes one artifact delivery destination fired when
+OnComplete=deliver. The Type discriminator selects which fields are
+meaningful — webhook + slack are functional in v0.8.0; email and
+google-drive are accepted at the API level and dispatched to senders
+that currently return a "not implemented" error recorded in
+status.delivery[].</p>
+<p>Across all types the operator never persists credentials itself; the
+sender pulls them from CredentialsSecret at dispatch time so a
+compromised operator pod can't enumerate Slack tokens / SMTP
+passwords / Drive service-account keys at rest.</p>
+<p><em>Appears in:</em>
+- <a href="#lifecyclespec">LifecycleSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type names the delivery backend.</td>
+<td></td>
+<td>Enum: [webhook slack email google-drive] <br /></td>
+</tr>
+<tr>
+<td><code>artifactPath</code> <em>string</em></td>
+<td>ArtifactPath is the file path within the team's output workspace<br />(typically /workspace/output) to attach to or send as the<br />delivery body. Optional for delivery types that carry their<br />message inline (e.g. a plain Slack notification with no file).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>message</code> <em>string</em></td>
+<td>Message is the human-readable text that accompanies the delivery<br />(Slack message text, webhook notes, email body lead-in).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the destination for the webhook delivery type.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>channel</code> <em>string</em></td>
+<td>Channel is the destination for the slack delivery type<br />(e.g. "#reports"). The slack sender reads<br />CredentialsSecret["slack-webhook-url"] to know where to post.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>to</code> <em>string array</em></td>
+<td>To is the recipient list for the email delivery type.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>subject</code> <em>string</em></td>
+<td>Subject is the message subject for the email delivery type.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>attachmentPath</code> <em>string</em></td>
+<td>AttachmentPath is a file path within the team's output workspace<br />to attach to the email delivery. Equivalent to ArtifactPath but<br />kept distinct because some emails attach + reference a separate<br />artifact in the body.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>folder</code> <em>string</em></td>
+<td>Folder is the destination folder for the google-drive delivery<br />type.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>credentialsSecret</code> <em>string</em></td>
+<td>CredentialsSecret names a Secret in the team's namespace carrying<br />authentication for this target. Expected keys per type:<br />  - slack:        "slack-webhook-url"   — full https://hooks.slack.com/... URL<br />  - email:        "smtp-host", "smtp-port", "smtp-username", "smtp-password"<br />  - google-drive: "service-account.json"<br />Not required for webhook; the URL is in the spec.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="inputspec">InputSpec<a class="headerlink" href="#inputspec" title="Permanent link">&para;</a></h4>
+<p>InputSpec declares an artifact this teammate consumes from an upstream
+teammate's outputs. The operator (a) treats From as an implicit
+dependency — this teammate is not spawned until the producer reaches
+Completed — and (b) wires an init container that copies the named
+artifact onto MountPath on this teammate's pod before the main
+container starts. The final on-pod path is {MountPath}/{Artifact}.</p>
+<p><em>Appears in:</em>
+- <a href="#teammatespec">TeammateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>from</code> <em>string</em></td>
+<td>From names the upstream teammate that produces the artifact.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>artifact</code> <em>string</em></td>
+<td>Artifact is the basename of the producer's output file<br />(e.g. "findings.md" for an output path of /workspace/output/findings.md).<br />The operator resolves the full source path by scanning the named<br />producer's Outputs[] for an entry whose Path basename matches.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>mountPath</code> <em>string</em></td>
+<td>MountPath is the absolute directory path on this teammate's pod<br />where the artifact will be made available. The operator creates<br />an emptyDir at MountPath and stages the artifact there via an<br />init container; the main container sees {MountPath}/{Artifact}.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="leadspec">LeadSpec<a class="headerlink" href="#leadspec" title="Permanent link">&para;</a></h4>
+<p>LeadSpec defines the team lead configuration.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrunspec">AgentTeamRunSpec</a>
+- <a href="#agentteamschedulespec">AgentTeamScheduleSpec</a>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code> <em>string</em></td>
+<td>Model to use for the team lead.</td>
+<td>opus</td>
+<td>Enum: [opus sonnet haiku] <br /></td>
+</tr>
+<tr>
+<td><code>prompt</code> <em>string</em></td>
+<td>Prompt is the initial instruction for the team lead.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>permissionMode</code> <em>string</em></td>
+<td>PermissionMode controls how the lead handles permission requests.</td>
+<td>auto-accept</td>
+<td>Enum: [auto-accept plan default] <br /></td>
+</tr>
+<tr>
+<td><code>skills</code> <em><a href="#skillspec">SkillSpec</a> array</em></td>
+<td>Skills to mount into .claude/skills/ for the lead agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>mcpServers</code> <em><a href="#mcpserverspec">MCPServerSpec</a> array</em></td>
+<td>MCPServers configures Model Context Protocol connections for the lead agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>resources</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+<td>Resources defines compute resources for the lead pod.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="lifecyclespec">LifecycleSpec<a class="headerlink" href="#lifecyclespec" title="Permanent link">&para;</a></h4>
+<p>LifecycleSpec controls team runtime behavior.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrunspec">AgentTeamRunSpec</a>
+- <a href="#agentteamschedulespec">AgentTeamScheduleSpec</a>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtemplatespec">AgentTeamTemplateSpec</a>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timeout</code> <em>string</em></td>
+<td>Timeout is the maximum duration the team can run (e.g. "4h", "30m").</td>
+<td>4h</td>
+<td></td>
+</tr>
+<tr>
+<td><code>budgetLimit</code> <em>string</em></td>
+<td>BudgetLimit is the maximum API spend in USD before the team is terminated (e.g. "10.00").</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>onComplete</code> <em>string</em></td>
+<td>OnComplete determines what happens when the team finishes.</td>
+<td>notify</td>
+<td>Enum: [create-pr push-branch notify deliver none] <br /></td>
+</tr>
+<tr>
+<td><code>delivery</code> <em><a href="#deliverytarget">DeliveryTarget</a> array</em></td>
+<td>Delivery is the list of artifact delivery targets fired when<br />OnComplete=deliver. Each target is dispatched independently;<br />per-target success/failure is recorded in status.delivery[].<br />Delivery failure is best-effort — the team is not rolled back to<br />Failed if a target rejects the request.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>pullRequest</code> <em><a href="#pullrequestspec">PullRequestSpec</a></em></td>
+<td>PullRequest configures PR creation when onComplete is "create-pr".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>approvalGates</code> <em><a href="#approvalgatespec">ApprovalGateSpec</a> array</em></td>
+<td>ApprovalGates pause execution before specified events until human approval is recorded.<br />Grant approval by annotating the AgentTeam: kubectl annotate agentteam <name> approved.kagents.dev/<event>=true</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxRestarts</code> <em>integer</em></td>
+<td>MaxRestarts bounds how many times each teammate pod may be re-spawned<br />after a Failed phase before the team itself is marked Failed. The lead<br />pod is not subject to this limit; a lead crash always fails the team.</td>
+<td>3</td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>githubTokenSecret</code> <em>string</em></td>
+<td>GitHubTokenSecret names a Secret in the team's namespace carrying a<br />GitHub token under the key GITHUB_TOKEN. Used by OnComplete=create-pr<br />(and OnComplete=push-branch, once implemented) to authenticate against<br />the GitHub REST API.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>prTitleTemplate</code> <em>string</em></td>
+<td>PRTitleTemplate overrides the title template used by OnComplete=create-pr.<br />Available variables: .TeamName, .Namespace. When empty, falls back to<br />Spec.Lifecycle.PullRequest.TitleTemplate, then to the default<br />"claude-teams: {{.TeamName}}".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>gitCredentialsSecret</code> <em>string</em></td>
+<td>GitCredentialsSecret names a Secret in the team's namespace carrying git<br />push credentials. The Secret must contain either 'ssh-privatekey' or<br />'token'. Used by OnComplete=push-branch (and OnComplete=create-pr when<br />push-branch runs ahead of it). Falls back to Spec.Repository.CredentialsSecret<br />when unset, so teams that already configured clone credentials with push<br />scope don't need to duplicate.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>consolidatedBranchTemplate</code> <em>string</em></td>
+<td>ConsolidatedBranchTemplate is a Go template rendered to produce the<br />branch name pushed by OnComplete=push-branch. Available variables:<br />.TeamName, .Namespace. When empty, defaults to "teams/{{.TeamName}}".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="mcpserverspec">MCPServerSpec<a class="headerlink" href="#mcpserverspec" title="Permanent link">&para;</a></h4>
+<p>MCPServerSpec configures a Model Context Protocol server for an agent.</p>
+<p><em>Appears in:</em>
+- <a href="#leadspec">LeadSpec</a>
+- <a href="#teammatespec">TeammateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name identifies this MCP server in the agent's config.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the MCP server endpoint.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>credentialsSecret</code> <em>string</em></td>
+<td>CredentialsSecret references a Secret containing an 'apiKey' key for bearer auth.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="metricsspec">MetricsSpec<a class="headerlink" href="#metricsspec" title="Permanent link">&para;</a></h4>
+<p>MetricsSpec configures Prometheus metrics.</p>
+<p><em>Appears in:</em>
+- <a href="#observabilityspec">ObservabilitySpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled turns on metrics exposition.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>port</code> <em>integer</em></td>
+<td>Port for the metrics endpoint.</td>
+<td>9090</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="observabilityspec">ObservabilitySpec<a class="headerlink" href="#observabilityspec" title="Permanent link">&para;</a></h4>
+<p>ObservabilitySpec configures monitoring and notifications.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamspec">AgentTeamSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code> <em><a href="#metricsspec">MetricsSpec</a></em></td>
+<td>Metrics configures Prometheus metrics exposition.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>logLevel</code> <em>string</em></td>
+<td>LogLevel controls operator log verbosity for this team.</td>
+<td>info</td>
+<td>Enum: [debug info warn error] <br /></td>
+</tr>
+<tr>
+<td><code>webhook</code> <em><a href="#webhookspec">WebhookSpec</a></em></td>
+<td>Webhook configures event notifications.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="outputspec">OutputSpec<a class="headerlink" href="#outputspec" title="Permanent link">&para;</a></h4>
+<p>OutputSpec declares a file an agent produces. Downstream teammates
+consume it by declaring a matching InputSpec; the operator also
+records each output in AgentTeam.Status.Artifacts on completion.</p>
+<p><em>Appears in:</em>
+- <a href="#teammatespec">TeammateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code> <em>string</em></td>
+<td>Path is the absolute filesystem path on the producer pod where the<br />teammate writes the artifact. For Cowork teams this is typically a<br />path under the team's output mount (e.g. /workspace/output/findings.md).</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description is an optional human-readable summary of the artifact.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="payloadinjectionspec">PayloadInjectionSpec<a class="headerlink" href="#payloadinjectionspec" title="Permanent link">&para;</a></h4>
+<p>PayloadInjectionSpec configures payload mounting on triggered teams.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mountPath</code> <em>string</em></td>
+<td>MountPath is the absolute file path inside agent pods where the<br />incoming webhook payload appears (e.g. "/workspace/data/trigger-payload.json").<br />The directory is created if it doesn't exist; the file is read-only.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="pipelinespec">PipelineSpec<a class="headerlink" href="#pipelinespec" title="Permanent link">&para;</a></h4>
+<p>PipelineSpec models a multi-stage workflow with explicit fan-out/merge
+as an alternative to flat per-teammate DependsOn. Each teammate is
+listed in exactly one stage; the stage graph determines spawn ordering.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamspec">AgentTeamSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stages</code> <em><a href="#stagespec">StageSpec</a> array</em></td>
+<td>Stages is the ordered list of stages. Ordering is for readability;<br />runtime ordering follows the StageSpec.DependsOn graph.</td>
+<td></td>
+<td>MinItems: 1 <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="pipelinestatus">PipelineStatus<a class="headerlink" href="#pipelinestatus" title="Permanent link">&para;</a></h4>
+<p>PipelineStatus reports stage-level progress for a pipelined team.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>currentStage</code> <em>string</em></td>
+<td>CurrentStage names the lowest-indexed stage that has not yet<br />reached Completed. Empty when every stage is Completed.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>stagesCompleted</code> <em>integer</em></td>
+<td>StagesCompleted is the count of stages whose teammates have all<br />reached Succeeded.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>stagesTotal</code> <em>integer</em></td>
+<td>StagesTotal is the total number of stages declared on the spec.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>stages</code> <em><a href="#stagestatus">StageStatus</a> array</em></td>
+<td>Stages reports per-stage detail.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="pullrequestspec">PullRequestSpec<a class="headerlink" href="#pullrequestspec" title="Permanent link">&para;</a></h4>
+<p>PullRequestSpec configures automatic PR creation.</p>
+<p><em>Appears in:</em>
+- <a href="#lifecyclespec">LifecycleSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>targetBranch</code> <em>string</em></td>
+<td>TargetBranch is the branch to open the PR against.</td>
+<td>main</td>
+<td></td>
+</tr>
+<tr>
+<td><code>titleTemplate</code> <em>string</em></td>
+<td>TitleTemplate is a Go template for the PR title.<br />Available variables: .TeamName, .Namespace</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>reviewers</code> <em>string array</em></td>
+<td>Reviewers to request on the PR.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>labels</code> <em>string array</em></td>
+<td>Labels to apply to the PR.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="pullrequeststatus">PullRequestStatus<a class="headerlink" href="#pullrequeststatus" title="Permanent link">&para;</a></h4>
+<p>PullRequestStatus reports PR creation state.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>state</code> <em>string</em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="qualitygatespec">QualityGateSpec<a class="headerlink" href="#qualitygatespec" title="Permanent link">&para;</a></h4>
+<p>QualityGateSpec configures validation steps.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtemplatespec">AgentTeamTemplateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>requireTests</code> <em>boolean</em></td>
+<td>RequireTests ensures tests pass before completion.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>requireLint</code> <em>boolean</em></td>
+<td>RequireLint ensures linting passes before completion.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>validationScript</code> <em>string</em></td>
+<td>ValidationScript is a custom script to run before marking complete.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="repositoryspec">RepositorySpec<a class="headerlink" href="#repositoryspec" title="Permanent link">&para;</a></h4>
+<p>RepositorySpec defines the git repository configuration.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrunspec">AgentTeamRunSpec</a>
+- <a href="#agentteamschedulespec">AgentTeamScheduleSpec</a>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the git clone URL.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>branch</code> <em>string</em></td>
+<td>Branch to clone and work from.</td>
+<td>main</td>
+<td></td>
+</tr>
+<tr>
+<td><code>worktreeStrategy</code> <em>string</em></td>
+<td>WorktreeStrategy determines how git worktrees are managed.</td>
+<td>per-teammate</td>
+<td>Enum: [per-teammate shared] <br /></td>
+</tr>
+<tr>
+<td><code>credentialsSecret</code> <em>string</em></td>
+<td>CredentialsSecret references a Secret containing git credentials.<br />The secret should contain either 'ssh-privatekey' or 'token'.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="scheduledrunstatus">ScheduledRunStatus<a class="headerlink" href="#scheduledrunstatus" title="Permanent link">&para;</a></h4>
+<p>ScheduledRunStatus records a single fire's bookkeeping.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamschedulestatus">AgentTeamScheduleStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the AgentTeamRun resource name.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>scheduledAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>ScheduledAt is the cron-computed time this run was triggered for.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase mirrors the underlying AgentTeamRun's last observed status.phase.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="scopespec">ScopeSpec<a class="headerlink" href="#scopespec" title="Permanent link">&para;</a></h4>
+<p>ScopeSpec restricts file access for a teammate.</p>
+<p><em>Appears in:</em>
+- <a href="#teammatespec">TeammateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>includePaths</code> <em>string array</em></td>
+<td>IncludePaths lists paths the teammate should focus on.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>excludePaths</code> <em>string array</em></td>
+<td>ExcludePaths lists paths the teammate should not modify.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="skillsource">SkillSource<a class="headerlink" href="#skillsource" title="Permanent link">&para;</a></h4>
+<p>SkillSource identifies where to load a skill from. Exactly one of
+ConfigMap or OCI must be set (enforced by CEL on SkillSpec).</p>
+<p>ConfigMap is simplest and lives entirely within the cluster — good
+for skills authored alongside the team CRs. OCI distributes skills
+as registry artifacts so they can be versioned, signed, shared
+across clusters, and pulled from public or private registries.</p>
+<p><em>Appears in:</em>
+- <a href="#skillspec">SkillSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>configMap</code> <em>string</em></td>
+<td>ConfigMap references a ConfigMap in the same namespace.<br />Each key in the ConfigMap becomes a file in the skill directory.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>oci</code> <em>string</em></td>
+<td>OCI is an OCI artifact reference containing the skill files<br />(e.g. "ghcr.io/org/skills/web-research:v1"). The operator runs<br />an <code>oras pull</code> init container at pod startup to materialize the<br />skill onto an emptyDir; the main container then sees the files<br />under ~/.claude/skills/{name}/. Private registries are supported<br />via spec.imagePullSecrets.<br />Re-pull semantics: the init container runs once per pod start,<br />so the artifact is re-pulled on every pod create. There is no<br />shared cache between pods — operators who want one should pin<br />to immutable digests so the registry can short-circuit identical<br />pulls cheaply.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="skillspec">SkillSpec<a class="headerlink" href="#skillspec" title="Permanent link">&para;</a></h4>
+<p>SkillSpec defines a Claude Code skill to mount into an agent pod.</p>
+<p><em>Appears in:</em>
+- <a href="#leadspec">LeadSpec</a>
+- <a href="#teammatespec">TeammateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the skill directory name under .claude/skills/.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>source</code> <em><a href="#skillsource">SkillSource</a></em></td>
+<td>Source identifies where to load the skill from.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="stagespec">StageSpec<a class="headerlink" href="#stagespec" title="Permanent link">&para;</a></h4>
+<p>StageSpec defines one stage of a pipeline.</p>
+<p><em>Appears in:</em>
+- <a href="#pipelinespec">PipelineSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the unique identifier for this stage within the pipeline.</td>
+<td></td>
+<td>Pattern: <code>^[a-z0-9]([a-z0-9-]*[a-z0-9])?$</code> <br /></td>
+</tr>
+<tr>
+<td><code>teammates</code> <em>string array</em></td>
+<td>Teammates names the teammates that participate in this stage. Names<br />must match spec.teammates[].name. A teammate may not appear in more<br />than one stage.</td>
+<td></td>
+<td>MinItems: 1 <br /></td>
+</tr>
+<tr>
+<td><code>dependsOn</code> <em>string array</em></td>
+<td>DependsOn names earlier stages this one waits on. Every teammate in<br />every listed stage must reach Succeeded before any teammate in this<br />stage is spawned.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>fan</code> <em>string</em></td>
+<td>Fan documents the stage's relationship to its dependencies and is<br />informational in v0.8.0 — both values currently behave identically.<br />"parallel" (default) signals a normal fan-out stage; "merge" signals<br />a synthesis stage that consumes outputs from multiple upstream<br />branches. Distinct runtime semantics are reserved for a future<br />version.</td>
+<td>parallel</td>
+<td>Enum: [parallel merge] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>approvalRequired</code> <em>boolean</em></td>
+<td>ApprovalRequired gates the entire stage on a human approval<br />annotation <code>approved.kagents.dev/stage-\{name\}=true</code> on the<br />AgentTeam. No teammate in this stage spawns until the annotation<br />is present.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="stagestatus">StageStatus<a class="headerlink" href="#stagestatus" title="Permanent link">&para;</a></h4>
+<p>StageStatus reports a single stage's runtime state.</p>
+<p><em>Appears in:</em>
+- <a href="#pipelinestatus">PipelineStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name matches the StageSpec.Name.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase is one of Waiting, PendingApproval, Running, Completed, Failed.</td>
+<td></td>
+<td>Enum: [Waiting PendingApproval Running Completed Failed] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>startedAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>StartedAt is when the first teammate in this stage was spawned.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>completedAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>CompletedAt is when the last teammate in this stage reached Succeeded.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>teammatesReady</code> <em>string</em></td>
+<td>TeammatesReady reports completed-vs-total teammates for this stage<br />in the form "N/M" (e.g. "2/3").</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="tasksummary">TaskSummary<a class="headerlink" href="#tasksummary" title="Permanent link">&para;</a></h4>
+<p>TaskSummary reports aggregate task progress.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>total</code> <em>integer</em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>completed</code> <em>integer</em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>inProgress</code> <em>integer</em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>pending</code> <em>integer</em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="teammatespec">TeammateSpec<a class="headerlink" href="#teammatespec" title="Permanent link">&para;</a></h4>
+<p>TeammateSpec defines a single teammate agent.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtemplatespec">AgentTeamTemplateSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the unique identifier for this teammate.</td>
+<td></td>
+<td>Pattern: <code>^[a-z0-9]([a-z0-9-]*[a-z0-9])?$</code> <br /></td>
+</tr>
+<tr>
+<td><code>model</code> <em>string</em></td>
+<td>Model to use for this teammate.</td>
+<td>sonnet</td>
+<td>Enum: [opus sonnet haiku] <br /></td>
+</tr>
+<tr>
+<td><code>prompt</code> <em>string</em></td>
+<td>Prompt is the spawn instruction for this teammate.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>scope</code> <em><a href="#scopespec">ScopeSpec</a></em></td>
+<td>Scope restricts which files this teammate can access.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>dependsOn</code> <em>string array</em></td>
+<td>DependsOn lists teammate names that must complete before this one starts.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>outputs</code> <em><a href="#outputspec">OutputSpec</a> array</em></td>
+<td>Outputs declares the artifacts this teammate produces. Each entry<br />records a file path the teammate's prompt is expected to write.<br />On completion the operator records every declared output in<br />AgentTeam.Status.Artifacts and makes them available to any<br />downstream teammate that consumes them via Inputs.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>inputs</code> <em><a href="#inputspec">InputSpec</a> array</em></td>
+<td>Inputs declares the upstream-produced artifacts this teammate<br />consumes. Each entry names a producer teammate (From) and an<br />artifact basename (Artifact); the operator (a) treats From as<br />an implicit dependency — this teammate is not spawned until the<br />producer reaches Completed — and (b) wires an init container that<br />stages the artifact at MountPath on this teammate's pod before<br />the main container starts.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>skills</code> <em><a href="#skillspec">SkillSpec</a> array</em></td>
+<td>Skills to mount into .claude/skills/ for this teammate.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>mcpServers</code> <em><a href="#mcpserverspec">MCPServerSpec</a> array</em></td>
+<td>MCPServers configures Model Context Protocol connections for this teammate.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>resources</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+<td>Resources defines compute resources for this teammate's pod.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="teammatestatus">TeammateStatus<a class="headerlink" href="#teammatestatus" title="Permanent link">&para;</a></h4>
+<p>TeammateStatus reports a teammate's state.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamstatus">AgentTeamStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>podName</code> <em>string</em></td>
+<td>PodName is the name of the agent's pod.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase of this agent.</td>
+<td></td>
+<td>Enum: [Pending Running Idle Completed Failed Waiting] <br /></td>
+</tr>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name matches the teammate's spec name.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>tasksCompleted</code> <em>integer</em></td>
+<td>TasksCompleted is the number of tasks this teammate has finished.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>tasksClaimed</code> <em>integer</em></td>
+<td>TasksClaimed is the number of tasks currently owned by this teammate.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>pendingApproval</code> <em>string</em></td>
+<td>PendingApproval is the approval gate event this teammate is waiting on, if any.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>restartCount</code> <em>integer</em></td>
+<td>RestartCount is the number of times this teammate's pod has been<br />re-spawned after a Failed phase. The team is marked Failed when any<br />teammate's RestartCount reaches Spec.Lifecycle.MaxRestarts.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="templatereference">TemplateReference<a class="headerlink" href="#templatereference" title="Permanent link">&para;</a></h4>
+<p>TemplateReference points to an AgentTeamTemplate.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrunspec">AgentTeamRunSpec</a>
+- <a href="#agentteamschedulespec">AgentTeamScheduleSpec</a>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name of the AgentTeamTemplate in the same namespace.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="triggerrunstatus">TriggerRunStatus<a class="headerlink" href="#triggerrunstatus" title="Permanent link">&para;</a></h4>
+<p>TriggerRunStatus records a single triggered fire.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtriggerstatus">AgentTeamTriggerStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the AgentTeamRun resource name.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>triggeredAt</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#time-v1-meta">Time</a></em></td>
+<td>TriggeredAt is when the listener accepted the webhook.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase mirrors the AgentTeamRun's status.phase.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="triggersource">TriggerSource<a class="headerlink" href="#triggersource" title="Permanent link">&para;</a></h4>
+<p>TriggerSource is a discriminated union of supported trigger types.
+Exactly one inner field should be set.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>webhook</code> <em><a href="#webhooktriggerspec">WebhookTriggerSpec</a></em></td>
+<td>Webhook fires the trigger when an HTTP POST arrives at the<br />configured Path on the kagents-trigger service.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="webhookspec">WebhookSpec<a class="headerlink" href="#webhookspec" title="Permanent link">&para;</a></h4>
+<p>WebhookSpec configures event notifications.</p>
+<p><em>Appears in:</em>
+- <a href="#observabilityspec">ObservabilitySpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL to POST events to.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>events</code> <em>string array</em></td>
+<td>Events to send notifications for.</td>
+<td></td>
+<td>MinItems: 1 <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="webhooktriggerspec">WebhookTriggerSpec<a class="headerlink" href="#webhooktriggerspec" title="Permanent link">&para;</a></h4>
+<p>WebhookTriggerSpec configures a webhook trigger.</p>
+<p><em>Appears in:</em>
+- <a href="#triggersource">TriggerSource</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code> <em>string</em></td>
+<td>Path is the URL path on the trigger service that fires this trigger<br />(e.g. "/hooks/new-deal"). Each trigger's Path must be unique within<br />the cluster; the listener matches incoming requests by exact prefix.</td>
+<td></td>
+<td>Pattern: <code>^/[A-Za-z0-9._/-]+$</code> <br /></td>
+</tr>
+<tr>
+<td><code>secret</code> <em>string</em></td>
+<td>Secret names a Secret in the trigger's namespace containing the<br />shared secret used to validate the request's HMAC signature<br />(key: "hmac-secret"). When empty, HMAC validation is skipped —<br />recommended only for traffic that's already authenticated upstream<br />(e.g. by an ingress with mTLS).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="workspaceinputspec">WorkspaceInputSpec<a class="headerlink" href="#workspaceinputspec" title="Permanent link">&para;</a></h4>
+<p>WorkspaceInputSpec defines a read-only input mounted into the agent pod.</p>
+<p><em>Appears in:</em>
+- <a href="#workspacespec">WorkspaceSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>configMap</code> <em>string</em></td>
+<td>ConfigMap references a ConfigMap to mount as a directory.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>pvc</code> <em>string</em></td>
+<td>PVC references an existing PersistentVolumeClaim to mount read-only.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>mountPath</code> <em>string</em></td>
+<td>MountPath is where to mount this input inside the container.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="workspaceoutputspec">WorkspaceOutputSpec<a class="headerlink" href="#workspaceoutputspec" title="Permanent link">&para;</a></h4>
+<p>WorkspaceOutputSpec defines the writable output volume for a Cowork team.</p>
+<p><em>Appears in:</em>
+- <a href="#workspacespec">WorkspaceSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pvc</code> <em>string</em></td>
+<td>PVC is the name of an existing PVC to use. If empty, the operator creates one named "{team}-output".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>storageClass</code> <em>string</em></td>
+<td>StorageClass for the auto-created PVC. Defaults to "nfs".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>size</code> <em>string</em></td>
+<td>Size of the auto-created PVC.</td>
+<td>5Gi</td>
+<td></td>
+</tr>
+<tr>
+<td><code>mountPath</code> <em>string</em></td>
+<td>MountPath inside the container where the output volume is mounted.</td>
+<td>/workspace/output</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="workspacespec">WorkspaceSpec<a class="headerlink" href="#workspacespec" title="Permanent link">&para;</a></h4>
+<p>WorkspaceSpec configures non-git inputs and outputs for Cowork teams.
+Use this instead of (or alongside) Repository for knowledge-work tasks.</p>
+<p><em>Appears in:</em>
+- <a href="#agentteamrunspec">AgentTeamRunSpec</a>
+- <a href="#agentteamschedulespec">AgentTeamScheduleSpec</a>
+- <a href="#agentteamspec">AgentTeamSpec</a>
+- <a href="#agentteamtriggerspec">AgentTeamTriggerSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inputs</code> <em><a href="#workspaceinputspec">WorkspaceInputSpec</a> array</em></td>
+<td>Inputs are read-only volumes mounted into all agent pods.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>output</code> <em><a href="#workspaceoutputspec">WorkspaceOutputSpec</a></em></td>
+<td>Output configures the shared writable output volume.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Last update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 2, 2026</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Created">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 3, 2026</span>
+  </span>
+
+    
+    
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Reference
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../explanation/" class="md-footer__link md-footer__link--next" aria-label="Next: Explanation">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Explanation
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Alan Chester
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/amcheste/kagents" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.60a45f97.min.js"></script>
+      
+        <script src="../../javascripts/drawer.js"></script>
+      
+    
+  </body>
+</html>

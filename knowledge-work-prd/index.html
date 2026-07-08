@@ -1,0 +1,1480 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Run Claude Code Agent Teams as a Kubernetes operator">
+      
+      
+        <meta name="author" content="Alan Chester">
+      
+      
+        <link rel="canonical" href="https://kagents.dev/knowledge-work-prd/">
+      
+      
+      
+      
+      <link rel="icon" href="../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
+    
+    
+      
+        <title>Product Requirements — kagents Knowledge Work Orchestrator - kagents</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.a40c8224.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:300,300i,400,400i,700,700i%7CIBM+Plex+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"IBM Plex Sans";--md-code-font:"IBM Plex Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/ac-colors.css">
+    
+      <link rel="stylesheet" href="../stylesheets/ac-typography.css">
+    
+      <link rel="stylesheet" href="../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#product-requirements-kagents-knowledge-work-orchestrator" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="kagents" class="md-header__button md-logo" aria-label="kagents" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            kagents
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Product Requirements — kagents Knowledge Work Orchestrator
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/amcheste/kagents" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amcheste/kagents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="kagents" class="md-nav__button md-logo" aria-label="kagents" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    kagents
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/amcheste/kagents" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amcheste/kagents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-to guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Install
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            Install
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/install/eks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Amazon EKS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/install/gke/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Google GKE
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/install/aks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    On Azure AKS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Operate
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            Operate
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/operate/expose-dashboard/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Expose the dashboard
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/operate/shared-storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configure shared storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/operate/budget-alerts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Set budget alerts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Author skills
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            Author skills
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to/skill-authoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Package and publish skills
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Explanation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/resources/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Resource model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/coordination/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Coordination protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      How to read this
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#personas" class="md-nav__link">
+    <span class="md-ellipsis">
+      Personas
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-0-identity-harness-abstraction-ships-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-0 — Identity &amp; harness abstraction (ships first)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-1-pipeline-stages" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-1 — Pipeline stages
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-2-output-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-2 — Output routing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-3-cron-scheduling-agentteamschedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-3 — Cron scheduling (AgentTeamSchedule)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-4-event-triggers-agentteamtrigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-4 — Event triggers (AgentTeamTrigger)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-5-result-delivery" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-5 — Result delivery
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-6-oci-skill-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-6 — OCI skill distribution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-7-pipeline-aware-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-7 — Pipeline-aware observability
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fr-8-positioning-readme-reframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      FR-8 — Positioning / README reframe
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-functional-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Non-functional requirements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phasing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependencies &amp; risks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope-non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Out of scope / non-goals
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-decisions-carried-from-the-design-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open decisions (carried from the design doc)
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/amcheste/kagents/edit/main/docs/knowledge-work-prd.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="product-requirements-kagents-knowledge-work-orchestrator">Product Requirements — kagents Knowledge Work Orchestrator<a class="headerlink" href="#product-requirements-kagents-knowledge-work-orchestrator" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status:</strong> Draft for review
+<strong>Audience:</strong> maintainer + contributors scoping and accepting the v0.8.x/v0.9.x work
+<strong>Companion docs:</strong> <a href="../product-vision/">Product Vision</a> (why) · this doc (what) · <a href="../knowledge-work-design/">Technical Design</a> (how)</p>
+</blockquote>
+<h2 id="how-to-read-this">How to read this<a class="headerlink" href="#how-to-read-this" title="Permanent link">&para;</a></h2>
+<p>The <a href="../product-vision/">vision</a> sets direction; this PRD turns it into concrete, acceptance-testable requirements; the <a href="../knowledge-work-design/">design</a> says how each is built. Requirements here are intentionally <strong>outcome-level</strong> — detailed mechanism and field-by-field specs live in the design doc.</p>
+<p>Requirements are grouped as <strong>FR-0</strong> (identity &amp; harness — the rebrand, ships first) and <strong>FR-1…FR-8</strong> (the knowledge-work capabilities). Each maps to a milestone.</p>
+<h2 id="personas">Personas<a class="headerlink" href="#personas" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Platform / DevOps engineer (operator).</strong> Installs and governs kagents on a shared cluster. Cares about RBAC, multi-tenancy, cost ceilings, observability, and a clean upgrade story.</li>
+<li><strong>Ops / SRE team (automator).</strong> Wires kagents into event streams and schedules. Cares about triggers, cron, concurrency control, and delivery to existing channels.</li>
+<li><strong>Knowledge worker / analyst (consumer).</strong> Wants a finished artifact — a report, a draft, an analysis — without operating anything. Invokes a team from a template; receives a result.</li>
+</ul>
+<h2 id="requirements-overview">Requirements overview<a class="headerlink" href="#requirements-overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Req</th>
+<th>Capability</th>
+<th>Milestone</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR-0a</td>
+<td>Repo / module / brand rename</td>
+<td>Rebrand</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-0b</td>
+<td>API group → <code>kagents.dev</code> (clean break)</td>
+<td>Rebrand</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-0c</td>
+<td>Harness adapter seam (<code>spec.harness</code>)</td>
+<td>Rebrand</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-1</td>
+<td>Pipeline stages (fan-out/merge)</td>
+<td>Knowledge Work</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-2</td>
+<td>Output routing between teammates</td>
+<td>Knowledge Work</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-3</td>
+<td>Cron scheduling (<code>AgentTeamSchedule</code>)</td>
+<td>Knowledge Work</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-4</td>
+<td>Event triggers (<code>AgentTeamTrigger</code>)</td>
+<td>Knowledge Work</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-5</td>
+<td>Result delivery (Slack/email/Drive/webhook)</td>
+<td>Knowledge Work</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-6</td>
+<td>OCI skill distribution</td>
+<td>Knowledge Work</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-7</td>
+<td>Pipeline-aware observability</td>
+<td>Knowledge Work</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>FR-8</td>
+<td>Positioning / README reframe</td>
+<td>Knowledge Work</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="fr-0-identity-harness-abstraction-ships-first">FR-0 — Identity &amp; harness abstraction (ships first)<a class="headerlink" href="#fr-0-identity-harness-abstraction-ships-first" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (operator):</strong> "As a platform engineer evaluating kagents, I want a project whose name and API don't tie me to one vendor, so I can adopt it as a durable platform capability rather than a Claude-specific tool."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- The project is named <strong>kagents</strong>; repo, module path, images, and Helm chart use that name (FR-0a).
+- The CRD API group is <strong><code>kagents.dev</code></strong> (FR-0b). Migration is a documented clean break (<code>MIGRATION.md</code>); no automated conversion.
+- An optional <strong><code>spec.harness</code></strong> field (default <code>claude-code</code>) selects the agent runtime; harness-specific concerns (runner image, protocol env/mounts, model set, budget rates) live behind an adapter, not in the operator core or CRD API (FR-0c).</p>
+<p><strong>Acceptance</strong>
+- [ ] <code>helm install kagents ./charts/kagents</code> deploys cleanly; CRDs register under <code>kagents.dev</code>.
+- [ ] No <code>claude.amcheste.io</code> or old module path remains except intentional historical artifacts (CI grep gate).
+- [ ] Existing <code>AgentTeam</code> CRs with <code>spec.harness</code> omitted behave identically to today (regression test).
+- [ ] <code>MIGRATION.md</code> documents the cutover and is linked from README.</p>
+<p><strong>Non-goal:</strong> a second harness adapter, plugin SPI, or registry — deferred until a real second harness exists.</p>
+<h2 id="fr-1-pipeline-stages">FR-1 — Pipeline stages<a class="headerlink" href="#fr-1-pipeline-stages" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (consumer):</strong> "As an analyst, I want to declare research → parallel analysis → synthesis → distribution as ordered stages, so a complex workflow runs in the right order without me babysitting it."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- <code>spec.pipeline.stages[]</code> with <code>dependsOn</code>, <code>fan: parallel|merge</code>, and <code>approvalRequired</code>.
+- Mutually exclusive with per-teammate <code>dependsOn</code> (enforced via CEL, not an admission webhook).
+- <code>status.pipeline</code> reports current stage and per-stage phase.</p>
+<p><strong>Acceptance</strong>
+- [ ] A 4-stage sample runs with correct fan-out (parallel) and merge (wait-for-all) semantics.
+- [ ] <code>approvalRequired</code> stage blocks until the approval annotation is set.
+- [ ] A CR with both <code>pipeline</code> and flat <code>dependsOn</code> is rejected at apply time.</p>
+<h2 id="fr-2-output-routing">FR-2 — Output routing<a class="headerlink" href="#fr-2-output-routing" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (consumer):</strong> "I want one teammate's output file to automatically become the next teammate's input, so stages share work product without manual copying."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- <code>outputs[]</code> / <code>inputs[]</code> on <code>TeammateSpec</code>; artifacts moved within the shared output PVC.
+- <code>status.artifacts[]</code> records produced artifacts; missing declared outputs surface as teammate errors.</p>
+<p><strong>Acceptance</strong>
+- [ ] Researcher→writer sample: the writer starts with the researcher's artifact mounted at its <code>inputs[].mountPath</code>.
+- [ ] <code>status.artifacts</code> populated after production; a missing declared output is reported as an error.</p>
+<h2 id="fr-3-cron-scheduling-agentteamschedule">FR-3 — Cron scheduling (<code>AgentTeamSchedule</code>)<a class="headerlink" href="#fr-3-cron-scheduling-agentteamschedule" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (automator):</strong> "As an SRE, I want a weekly report team to run on a cron schedule with a retained run history, like a CronJob."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- New CRD; <code>schedule</code> (cron), <code>templateRef</code> + overrides, <code>historyLimit</code>.
+- Idempotent per window (no double-fire on requeue); <code>status</code> tracks last/next run and history; old runs GC'd beyond <code>historyLimit</code>.
+- Instantiates via the existing <code>AgentTeamRun</code> path (no bespoke team creation).</p>
+<p><strong>Acceptance</strong>
+- [ ] A schedule fires once per window and not twice on controller restart.
+- [ ] <code>historyLimit</code> prunes completed runs; <code>status.nextScheduledAt</code> is accurate.</p>
+<h2 id="fr-4-event-triggers-agentteamtrigger">FR-4 — Event triggers (<code>AgentTeamTrigger</code>)<a class="headerlink" href="#fr-4-event-triggers-agentteamtrigger" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (automator):</strong> "As an SRE, I want an external webhook (e.g. a closed incident) to spin up a team, with the event payload available to the agents."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- New CRD; webhook trigger with HMAC validation; payload injected as a ConfigMap at a configurable mount path; <code>concurrencyPolicy: Allow|Forbid|Replace</code>.
+- Trigger listener runs as its <strong>own deployment</strong> (<code>kagents-trigger</code>, Helm-gated), not inside the manager.
+- Instantiates via the existing <code>AgentTeamRun</code> path.</p>
+<p><strong>Acceptance</strong>
+- [ ] A valid signed POST creates a team; an invalid HMAC is rejected.
+- [ ] Payload is readable by agents at the declared mount path.
+- [ ] <code>concurrencyPolicy</code> enforced (Forbid/Replace behave correctly under overlap).</p>
+<h2 id="fr-5-result-delivery">FR-5 — Result delivery<a class="headerlink" href="#fr-5-result-delivery" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (consumer):</strong> "When the report is done, deliver it to <code>#reports</code> / my inbox / a Drive folder — I shouldn't have to fetch it from a PVC."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- <code>onComplete: deliver</code> + <code>delivery[]</code> targets: webhook, slack, email, google-drive.
+- Runs as a finalization Job after teammates complete and quality gates pass; consumes credential secrets in the Job (not the operator).
+- Delivery failure is recorded in <code>status.delivery[]</code> but does <strong>not</strong> fail the team.</p>
+<p><strong>Acceptance</strong>
+- [ ] Webhook + Slack targets deliver a completed artifact; failures are surfaced in status without flipping the team to Failed.
+- [ ] Email + Drive land subsequently (delivery may ship incrementally — see open decisions).</p>
+<h2 id="fr-6-oci-skill-distribution">FR-6 — OCI skill distribution<a class="headerlink" href="#fr-6-oci-skill-distribution" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (operator):</strong> "I want to distribute and version agent skills as OCI artifacts from a registry, not hand-maintained ConfigMaps."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- <code>skills[].source.oci</code> pulled via an init container into a shared volume; ConfigMap source remains supported (backward compatible); private registries via <code>imagePullSecrets</code>; digest-based caching.
+- Skill packaging convention + <code>docs/skills-authoring.md</code>.</p>
+<p><strong>Acceptance</strong>
+- [ ] An OCI skill pulls and mounts at the harness skill path; a ConfigMap skill still works in the same team.
+- [ ] A published sample skill is pullable from the chosen registry.</p>
+<h2 id="fr-7-pipeline-aware-observability">FR-7 — Pipeline-aware observability<a class="headerlink" href="#fr-7-pipeline-aware-observability" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (operator):</strong> "I want stage progress, artifacts, and delivery outcomes visible in metrics, the dashboard, and <code>kubectl describe</code> — not just tokens and restarts."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- <code>status.pipeline</code> + <code>status.artifacts</code> surfaced; new <code>kagents_*</code> Prometheus metrics (stage duration, artifacts produced, stage active, delivery success/failure); dashboard stage bar + artifact list; <code>kubectl describe</code> stage summary.</p>
+<p><strong>Acceptance</strong>
+- [ ] New metrics emit during a pipeline run; dashboard shows stage progress and artifacts.</p>
+<h2 id="fr-8-positioning-readme-reframe">FR-8 — Positioning / README reframe<a class="headerlink" href="#fr-8-positioning-readme-reframe" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Story (evaluator):</strong> "I want the README to lead with knowledge work (Cowork example first, coding second), so the project's purpose is immediately clear."</p>
+</blockquote>
+<p><strong>Requirements</strong>
+- README leads with a Cowork example; coding example second; the "not a general workflow engine" non-goal stated; brand/positioning aligned with the <a href="../product-vision/">vision</a>.</p>
+<p><strong>Acceptance</strong>
+- [ ] README opens with a knowledge-work example and the one-line positioning; non-goals section present.</p>
+<hr />
+<h2 id="non-functional-requirements">Non-functional requirements<a class="headerlink" href="#non-functional-requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Cost bounds.</strong> Every team path (manual, scheduled, triggered) honors <code>lifecycle.budgetLimit</code>; schedules/triggers must not be able to spawn unbounded concurrent spend (<code>concurrencyPolicy</code>, <code>historyLimit</code>).</li>
+<li><strong>Reliability.</strong> Schedules are idempotent per window; delivery is best-effort and isolated from team success; crash-respawn semantics (existing) are unchanged.</li>
+<li><strong>Security.</strong> Trigger ingress validates HMAC and runs out-of-process from the manager; delivery/credential secrets are consumed only by the Job that needs them, never read by the operator; per-agent RBAC (existing) unchanged.</li>
+<li><strong>Backward compatibility.</strong> Within the <code>kagents.dev</code> group, all new fields are additive and optional; an existing minimal <code>AgentTeam</code> keeps working. The one intentional break is the API-group migration (FR-0b), documented in MIGRATION.md.</li>
+<li><strong>Observability.</strong> Every new control path emits metrics and events; no silent failures.</li>
+</ul>
+<h2 id="phasing">Phasing<a class="headerlink" href="#phasing" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Rebrand milestone (first):</strong> FR-0a → FR-0b → FR-0c (repo rename → module path → API group → harness seam → image/chart names).</li>
+<li><strong>Knowledge Work milestone (second), suggested order:</strong> FR-1 + FR-2 (core) → FR-3 + FR-4 (instantiation) → FR-5 + FR-6 (integrations) → FR-7 (observability) → FR-8 (positioning).</li>
+</ol>
+<h2 id="dependencies-risks">Dependencies &amp; risks<a class="headerlink" href="#dependencies-risks" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Sequencing risk:</strong> building knowledge-work CRDs before the API-group migration would create CRs under the old group and force a double migration. Mitigated by rebrand-first.</li>
+<li><strong>Clean-break risk:</strong> any real deployed user must re-apply resources. Mitigated by pre-1.0 timing + MIGRATION.md; revisit if adoption grows before the migration lands.</li>
+<li><strong>Trigger ingress is new attack surface.</strong> Mitigated by HMAC + separate, optional, Helm-gated deployment.</li>
+<li><strong>Delivery credential sprawl</strong> (SMTP, Drive, Slack). Mitigated by Job-scoped secret consumption and incremental rollout (webhook/Slack first).</li>
+<li><strong>Harness over-abstraction.</strong> Mitigated by the explicit YAGNI guardrail: thin internal seam, one adapter, no SPI until harness #2.</li>
+</ul>
+<h2 id="out-of-scope-non-goals">Out of scope / non-goals<a class="headerlink" href="#out-of-scope-non-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Not a general workflow engine.</strong> kagents orchestrates AI agent <em>teams</em> with the agent protocol and human-in-the-loop semantics baked in. For arbitrary containerized DAGs, use Argo Workflows or Temporal.</li>
+<li><strong>Not a model or an agent.</strong> kagents runs a harness (Claude Code today); it doesn't ship the intelligence.</li>
+<li><strong>Not a replacement for human judgment.</strong> Approval gates and delivery review remain first-class.</li>
+<li><strong>No second harness adapter / plugin SPI yet</strong> (deferred, not abandoned — see vision).</li>
+</ul>
+<h2 id="open-decisions-carried-from-the-design-doc">Open decisions (carried from the design doc)<a class="headerlink" href="#open-decisions-carried-from-the-design-doc" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Renumber</strong> rebrand → v0.8.0 and Knowledge Work → v0.9.0, or keep numbers and rely on sequencing?</li>
+<li><strong>Trigger topology</strong> — separate <code>kagents-trigger</code> deployment (proposed) vs. in-manager.</li>
+<li><strong>Canonical OCI registry</strong> org/namespace for first-party skills.</li>
+<li><strong>Delivery incrementally</strong> (webhook+Slack first, email+Drive later) vs. all four at once.</li>
+<li><strong>Schedule/Trigger always via template</strong> (<code>AgentTeamRun</code>) vs. supporting inline template-less teams later.</li>
+</ol>
+
+
+
+
+
+
+
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Last update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 31, 2026</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Created">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 12, 2026</span>
+  </span>
+
+    
+    
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Alan Chester
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/amcheste/kagents" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.60a45f97.min.js"></script>
+      
+        <script src="../javascripts/drawer.js"></script>
+      
+    
+  </body>
+</html>
