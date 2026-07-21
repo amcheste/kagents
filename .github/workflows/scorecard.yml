@@ -12,17 +12,12 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
-# The reusable workflow's job requests security-events:write (SARIF upload),
-# id-token:write (scorecard OIDC signing), and actions:read (workflow read
-# access the Scorecard checks probe); a called workflow can only downgrade
-# the caller's grant, so they must all be granted here or the run dies at
-# startup ("workflow file issue").
 permissions:
-  contents: read
   security-events: write
   id-token: write
+  contents: read
   actions: read
 
 jobs:
   scorecard:
-    uses: amcheste/gh-workflows/.github/workflows/reusable-scorecard.yml@v1.1.3
+    uses: amcheste/gh-workflows/.github/workflows/reusable-scorecard.yml@v1.1.0

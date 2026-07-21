@@ -12,9 +12,6 @@ on:
   schedule:
     - cron: '0 2 * * 1'  # Every Monday at 02:00 UTC
 
-# The reusable workflow's job requests security-events:write (SARIF upload);
-# a called workflow can only downgrade the caller's grant, so it must be
-# granted here or the run dies at startup ("workflow file issue").
 permissions:
   contents: read
   security-events: write
